@@ -1,6 +1,7 @@
 package;
 
 import haxe.io.BytesInput;
+import haxe.io.Input;
 import neko.Lib;
 import sys.FileSystem;
 import sys.io.File;
@@ -17,7 +18,7 @@ class Main
 		
 		if (args.length < 1)
 		{
-			Sys.println("Not enough arguments!");
+			Sys.println('Not enough arguments!');
 			Sys.exit(1);
 		}
 		
@@ -25,24 +26,21 @@ class Main
 		
 		if (!FileSystem.exists(scriptFile))
 		{
-			trace(scriptFile + " doesn't exist!");
+			Sys.println('$scriptFile doesn\'t exist!');
 			Sys.exit(2);
 		}
 		
 		var bytesInput:BytesInput = new BytesInput(File.getBytes(scriptFile));
-		var scriptString:String = bytesInput.readString(bytesInput.length);
 		
-		parseScript(scriptString);
+		parseScript(bytesInput);
 	}
 	
-	private function parseScript(script:String)
+	private function parseScript(script:BytesInput)
 	{
-		var lines:Array<String> = script.split("\r\n");
+		var lines:Array<String> = [while (script.position < script.length) script.readLine()];
 		
-		for (str in lines)
-		{
-			trace(str);
-		}
+		var sp:ScriptProcess = new ScriptProcess(lines);
+		sp.run();
 	}
 	
 	static function main()
