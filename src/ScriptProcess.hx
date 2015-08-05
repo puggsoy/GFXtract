@@ -1,19 +1,34 @@
 package;
 
 import haxe.ds.StringMap;
+import haxe.io.BytesInput;
+
+typedef VarEntry = {
+	var key:String;
+	var value:Dynamic;
+}
 
 class ScriptProcess
 {
 	private var script:Array<String>;
 	private var currentLine:Int;
 	
+	private var file:BytesInput;
+	
 	private var variables:Map<String, Dynamic> = new Map<String, Dynamic>();
 	
-	public function new(script:Array<String>) 
+	/**
+	 * @param	script The loaded script, as an array of its lines.
+	 */
+	public function new(script:Array<String>, file:BytesInput)
 	{
 		this.script = script;
+		this.file = file;
 	}
 	
+	/**
+	 * Run the script.
+	 */
 	public function run()
 	{
 		currentLine = 1;
@@ -25,6 +40,9 @@ class ScriptProcess
 		}
 	}
 	
+	/**
+	 * Read in and execute a line.
+	 */
 	private function parseLine(line:String)
 	{
 		var reg = ~/[^\s"']+|"[^"]*"|'[^']*'/;
@@ -50,28 +68,78 @@ class ScriptProcess
 		cmdFunction(arguments);
 	}
 	
+	/**
+	 * Parses array of command arguments, converting them to their appropriate type.
+	 * @param	args
+	 * @return
+	 */
 	private function parseArgs(args:Array<String>):Array<Dynamic>
 	{
 		var ret:Array<Dynamic> = new Array<Dynamic>();
 		
-		for (i in 0...args.length)
+		for (arg in args)
 		{
-			if (~/^".+"$/.match(args[i]))
+			if (~/^".+"$/.match(arg))
 			{
-				ret.push(args[i].substring(1, args[i].length - 2));
+				ret.push(arg.substring(1, arg.length - 2));
 			}
 			else
-			if (~/^0x/.match(args[i]) || ~/^[0-9]+$/.match(args[i]))
+			if (~/^0x/.match(arg) || ~/^[0-9]+$/.match(arg))
 			{
-				ret.push(Std.parseInt(args[i]));
+				ret.push(Std.parseInt(arg));
 			}
 			else
 			{
-				if (variables.exists(args[i])) ret.push(variables.get(args[i]));
+				if (!variables.exists(arg)) variables.set(arg, null);
+				var entry:VarEntry = { key: arg, value: variables.get(arg) };
+				
+				ret.push(entry);
 			}
 		}
 		
 		return ret;
+	}
+	
+	/*private function checkArgs(args:Array<Dynamic>, types:Array<Dynamic>)
+	{
+		if (args.length < types.length) error("Not enough arguments!");
+		for (i in 0...args.length)
+		{
+			if (Type.getClass(args[i]) != types[i])
+			{
+				error("Invalid argument type, " + Type.getClassName(Type.getClass(args[i])) + " given, expected " + types[i]);
+			}
+			else
+			{
+				trace("correct");
+			}
+		}
+	}
+	*/
+	
+	private function get(args:Array<String>)
+	{
+		//var pargs:Array<Dynamic> = parseArgs(args.splice(0, 3));
+		
+		var name:String = args[0].toLowerCase();
+		var type:String = args[1].toLowerCase();
+		var fileNum:Int = (args.length > 2) ? Std.parseInt(args[2]) : 0;
+		
+		var val:Dynamic = null;
+		
+		switch(type)
+		{
+			case "byte":
+				val = file.readByte();
+			case "short":
+				val = file.readUInt16();
+			case "long":
+				val = file.readInt32();
+			case "string":
+				val = file.readUntil(0);
+		}
+		
+		variables.set(name, val);
 	}
 	
 	private function print(args:Array<String>)
@@ -88,8 +156,8 @@ class ScriptProcess
 		while (reg.match(msg))
 		{
 			var posLen = reg.matchedPos();
-			var varName:String = msg.substr(posLen.pos + 1, posLen.len - 2);
-			reg.replace(msg, variables.get(varName));
+			var varName:String = msg.substr(posLen.pos + 1, posLen.len - 2).toLowerCase();
+			msg = reg.replace(msg, '${variables.get(varName)}');
 		}
 		
 		Sys.println('--Script message: ');
@@ -103,8 +171,8 @@ class ScriptProcess
 	
 	private function error(msg:String, terminate:Bool = true)
 	{
-		Sys.println('Error on line $currentLine:');
-		Sys.println(msg);
+		Sys.println('--Error on line $currentLine:');
+		Sys.println('  $msg');
 		
 		if (terminate) Sys.exit(10);
 	}
