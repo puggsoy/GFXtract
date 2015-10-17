@@ -13,17 +13,31 @@ class ScriptProcess
 	private var script:Array<String>;
 	private var currentLine:Int;
 	
-	private var file:BytesInput;
-	
-	private var variables:Map<String, Dynamic> = new Map<String, Dynamic>();
+	/**
+	 * Holds all open files. 0 is the file originally specified by the user.
+	 */
+	private var files:Array<BytesInput>;
 	
 	/**
-	 * @param	script The loaded script, as an array of its lines.
+	 * Holds all script variables
+	 */
+	private var variables:Map<String, Dynamic> = new Map<String, Dynamic>();
+	
+	private static var types:Array<String> = ['byte',
+											  'short',
+											  'long',
+											  'string'];
+	
+	/**
+	 * @param	script The loaded script, as an array of its lines
+	 * @param   file The loaded file
 	 */
 	public function new(script:Array<String>, file:BytesInput)
 	{
 		this.script = script;
-		this.file = file;
+		
+		files = new Array<BytesInput>();
+		files.push(file);
 	}
 	
 	/**
@@ -35,8 +49,15 @@ class ScriptProcess
 		
 		for (line in script)
 		{
-			parseLine(line);
-			currentLine++;
+			try
+			{
+				parseLine(line);
+				currentLine++;
+			}
+			catch (e:Dynamic)
+			{
+				error(e);
+			}
 		}
 	}
 	
@@ -45,18 +66,15 @@ class ScriptProcess
 	 */
 	private function parseLine(line:String)
 	{
-		var reg = ~/[^\s"']+|"[^"]*"|'[^']*'/;
+		var reg:EReg = ~/\s(?![\w!.]+")/g;
 		
-		var parts:Array<String> = new Array<String>();
+		var args:Array<String> = parseArgs(line);
 		
-		while(reg.match(line))
-		{
-			parts.push(reg.matched(0));
-			line = reg.replace(line, '');
-		}
+		//trace(args);
+		//return;
 		
-		var command:String = parts.shift();
-		var arguments:Array<String> = parts;
+		var command:String = args.shift();
+		var arguments:Array<String> = args;
 		
 		var cmdFunction:Array<String> -> Void = Reflect.field(this, command);
 		
@@ -69,89 +87,166 @@ class ScriptProcess
 	}
 	
 	/**
-	 * Parses array of command arguments, converting them to their appropriate type.
-	 * @param	args
-	 * @return
+	 * Parses line into separate arguments
 	 */
-	private function parseArgs(args:Array<String>):Array<Dynamic>
+	private function parseArgs(argString:String):Array<String>
 	{
-		var ret:Array<Dynamic> = new Array<Dynamic>();
+		var inArgs:Array<String> = argString.split(' ');
+		var outArgs:Array<String> = new Array<String>();
 		
-		for (arg in args)
+		var str:String = null;
+		
+		for (s in inArgs)
 		{
-			if (~/^".+"$/.match(arg))
+			if (str == null)
 			{
-				ret.push(arg.substring(1, arg.length - 2));
+				if (s.indexOf('"') == 0)
+				{
+					str = s;
+					
+					if (s.lastIndexOf('"') == s.length - 1)
+					{
+						outArgs.push(str.substring(1, str.length - 1));
+						str = null;
+					}
+				}
+				else
+				{
+					outArgs.push(s);
+				}
 			}
 			else
-			if (~/^0x/.match(arg) || ~/^[0-9]+$/.match(arg))
 			{
-				ret.push(Std.parseInt(arg));
-			}
-			else
-			{
-				if (!variables.exists(arg)) variables.set(arg, null);
-				var entry:VarEntry = { key: arg, value: variables.get(arg) };
+				str += ' ' + s;
 				
-				ret.push(entry);
+				if (s.lastIndexOf('"') == s.length - 1)
+				{
+					outArgs.push(str.substring(1, str.length - 1));
+					str = null;
+				}
 			}
 		}
 		
-		return ret;
+		return outArgs;
 	}
 	
-	/*private function checkArgs(args:Array<Dynamic>, types:Array<Dynamic>)
+	private function parseValue(str:String, ?type:String):Dynamic
 	{
-		if (args.length < types.length) error("Not enough arguments!");
-		for (i in 0...args.length)
+		var val:Dynamic = null;
+		
+		if (variables.exists(name2))
 		{
-			if (Type.getClass(args[i]) != types[i])
+			val = variables.get(name2);
+		}
+		else
+		if (type != null) //If we're given a type, assume the value is of that type
+		{
+			switch(types.indexOf(type))
 			{
-				error("Invalid argument type, " + Type.getClassName(Type.getClass(args[i])) + " given, expected " + types[i]);
+				case 0:
+					val = Math.min(Std.parseInt(str), 0xFF);
+				case 1:
+					val = Math.min(Std.parseInt(str), 0xFFFF);
+				case 2:
+					val = Math.min(Std.parseInt(str), 0xFFFFFFFF);
+				case 3:
+					val = str;
+				default:
+					error('No such type: $type');
+			}
+		}
+		else //If not, try to infer it
+		{
+			if (StringTools.startsWith(str, '0x') || ~/[0-9]/.match(str))
+			{
+				val = Std.parseInt(str);
 			}
 			else
 			{
-				trace("correct");
+				val = str;
 			}
 		}
+		
+		return val;
 	}
-	*/
 	
+	/**
+	 * Reads file data.
+	 * 
+	 * Script format: Get VAR TYPE [FILENUM]
+	 * filenum is 0 by default
+	 */
 	private function get(args:Array<String>)
 	{
-		//var pargs:Array<Dynamic> = parseArgs(args.splice(0, 3));
-		
 		var name:String = args[0].toLowerCase();
 		var type:String = args[1].toLowerCase();
 		var fileNum:Int = (args.length > 2) ? Std.parseInt(args[2]) : 0;
 		
 		var val:Dynamic = null;
 		
-		switch(type)
+		switch(types.indexOf(type))
 		{
-			case "byte":
-				val = file.readByte();
-			case "short":
-				val = file.readUInt16();
-			case "long":
-				val = file.readInt32();
-			case "string":
-				val = file.readUntil(0);
+			case 0:
+				val = files[fileNum].readByte();
+			case 1:
+				val = files[fileNum].readUInt16();
+			case 2:
+				val = files[fileNum].readInt32();
+			case 3:
+				val = files[fileNum].readUntil(0);
+			default:
+				error('No such type: $type');
 		}
 		
 		variables.set(name, val);
 	}
 	
+	/**
+	 * Sets a variable.
+	 * 
+	 * Script format: Set VAR [TYPE] VAR
+	 */
+	private function set(args:Array<String>)
+	{
+		var name1:String = args[0].toLowerCase();
+		var name2:String = args[1].toLowerCase();
+		
+		var type:String = null;
+		var val:Dynamic = null;
+		
+		if (types.indexOf(name2) != 1)
+		{
+			type = name2;
+			name2 = args[2].toLowerCase();
+		}
+		
+		if (type != null && types.indexOf(type) < 0)
+		{
+			error('No such type: $type');
+		}
+		
+		if (variables.exists(name2))
+		{
+			val = variables.get(name2);
+		}
+		else
+		{
+			parseValue;
+		}
+		
+		variables.set(name1, val);
+	}
+	
+	/**
+	 * Print out a message. Surround variables with percentage signs (%) to print their values.
+	 * 
+	 * Script format: Print MESSAGE
+	 */
 	private function print(args:Array<String>)
 	{
 		var msg:String = args[0];
 		
-		if (~/^".+"$/.match(msg))
-		{
-			msg = msg.substring(1, msg.length - 1);
-		}
-		
-		var reg:EReg = ~/%(.+?)%/g;
+		var reg:EReg = ~/%(.+?)%/;
 		
 		while (reg.match(msg))
 		{
@@ -164,11 +259,19 @@ class ScriptProcess
 		Sys.println('  $msg');
 	}
 	
+	/**
+	 * Cleanly exit the program.
+	 * 
+	 * Script format: Exit
+	 */
 	private function exit(args:Array<String>)
 	{
 		Sys.exit(0);
 	}
 	
+	/**
+	 * Prints errors and terminates script.
+	 */
 	private function error(msg:String, terminate:Bool = true)
 	{
 		Sys.println('--Error on line $currentLine:');
