@@ -34,21 +34,23 @@ class Main
 			}
 		}
 		
-		var scriptFile:String = args[0];
-		var inputFile:String = args[1];
+		var scriptPath:String = args[0];
+		var inputPath:String = args[1];
 		
-		var scriptBytes:BytesInput = new BytesInput(File.getBytes(scriptFile));
-		var inputBytes:BytesInput = new BytesInput(File.getBytes(inputFile));
+		var scriptFile:FileInput = File.read(scriptPath);
+		var inputFile:FileInput = File.read(inputPath);
 		
-		parseScript(scriptBytes, inputBytes);
+		parseScript(scriptFile, inputFile);
 	}
 	
 	/**
 	 * Loads input file(s) and runs the script on each.
 	 */
-	private function parseScript(script:BytesInput, input:BytesInput)
+	private function parseScript(script:FileInput, input:FileInput)
 	{
-		var lines:Array<String> = [while (script.position < script.length) script.readLine()];
+		
+		
+		var lines:Array<String> = [while (!script.eof()) script.readLine()];
 		
 		var sp:ScriptProcess = new ScriptProcess(lines, input);
 		sp.run();

@@ -2,6 +2,7 @@ package;
 
 import haxe.ds.StringMap;
 import haxe.io.BytesInput;
+import sys.io.FileInput;
 
 typedef VarEntry = {
 	var key:String;
@@ -16,27 +17,28 @@ class ScriptProcess
 	/**
 	 * Holds all open files. 0 is the file originally specified by the user.
 	 */
-	private var files:Array<BytesInput>;
+	private var files:Array<FileInput>;
 	
 	/**
-	 * Holds all script variables
+	 * Stores all script variables
 	 */
 	private var variables:Map<String, Dynamic> = new Map<String, Dynamic>();
 	
 	private static var types:Array<String> = ['byte',
 											  'short',
 											  'long',
-											  'string'];
+											  'string',
+											  'image'];
 	
 	/**
 	 * @param	script The loaded script, as an array of its lines
 	 * @param   file The loaded file
 	 */
-	public function new(script:Array<String>, file:BytesInput)
+	public function new(script:Array<String>, file:FileInput)
 	{
 		this.script = script;
 		
-		files = new Array<BytesInput>();
+		files = new Array<FileInput>();
 		files.push(file);
 	}
 	
@@ -66,14 +68,12 @@ class ScriptProcess
 	 */
 	private function parseLine(line:String)
 	{
-		var reg:EReg = ~/\s(?![\w!.]+")/g;
-		
 		var args:Array<String> = parseArgs(line);
 		
 		//trace(args);
 		//return;
 		
-		var command:String = args.shift();
+		var command:String = args.shift().toLowerCase();
 		var arguments:Array<String> = args;
 		
 		var cmdFunction:Array<String> -> Void = Reflect.field(this, command);
@@ -134,23 +134,16 @@ class ScriptProcess
 	{
 		var val:Dynamic = null;
 		
-		if (variables.exists(name2))
-		{
-			val = variables.get(name2);
-		}
-		else
 		if (type != null) //If we're given a type, assume the value is of that type
 		{
 			switch(types.indexOf(type))
 			{
-				case 0:
-					val = Math.min(Std.parseInt(str), 0xFF);
-				case 1:
-					val = Math.min(Std.parseInt(str), 0xFFFF);
-				case 2:
-					val = Math.min(Std.parseInt(str), 0xFFFFFFFF);
+				case 0, 1, 2:
+					val = Std.parseInt(str);
 				case 3:
 					val = str;
+				case 4:
+					error("Can't set an image like this");
 				default:
 					error('No such type: $type');
 			}
@@ -174,7 +167,7 @@ class ScriptProcess
 	 * Reads file data.
 	 * 
 	 * Script format: Get VAR TYPE [FILENUM]
-	 * filenum is 0 by default
+	 * FILENUM is 0 by default
 	 */
 	private function get(args:Array<String>)
 	{
@@ -194,6 +187,8 @@ class ScriptProcess
 				val = files[fileNum].readInt32();
 			case 3:
 				val = files[fileNum].readUntil(0);
+			case 4:
+				error("Can't get an image like this");
 			default:
 				error('No such type: $type');
 		}
@@ -214,13 +209,13 @@ class ScriptProcess
 		var type:String = null;
 		var val:Dynamic = null;
 		
-		if (types.indexOf(name2) != 1)
+		if (types.indexOf(name2) != -1)
 		{
 			type = name2;
 			name2 = args[2].toLowerCase();
 		}
 		
-		if (type != null && types.indexOf(type) < 0)
+		if (type != null && types.indexOf(type) == -1)
 		{
 			error('No such type: $type');
 		}
@@ -231,7 +226,7 @@ class ScriptProcess
 		}
 		else
 		{
-			parseValue;
+			val = parseValue(name2, (type != null) ? type : null);
 		}
 		
 		variables.set(name1, val);
@@ -257,6 +252,22 @@ class ScriptProcess
 		
 		Sys.println('--Script message: ');
 		Sys.println('  $msg');
+	}
+	
+	/**
+	 * Reads a string of specified length.
+	 * 
+	 * Script format: GetDString VAR LENGTH [FILENUM]
+	 * FILENUM is 0 by default
+	 */
+	private function getdstring(args:Array<String>)
+	{
+		var name:String = args[0].toLowerCase();
+		var length:Int = Std.parseInt(args[1].toLowerCase());
+		var fileNum:Int = (args.length > 2) ? Std.parseInt(args[2]) : 0;
+		
+		var val:String = files[fileNum].readString(length);
+		variables.set(name, val);
 	}
 	
 	/**
