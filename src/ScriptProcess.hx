@@ -47,13 +47,13 @@ class ScriptProcess
 	 */
 	public function run()
 	{
-		currentLine = 1;
+		currentLine = 0;
 		
-		for (line in script)
+		while (currentLine != script.length)
 		{
 			try
 			{
-				parseLine(line);
+				parseLine(script[currentLine]);
 				currentLine++;
 			}
 			catch (e:Dynamic)
@@ -68,13 +68,28 @@ class ScriptProcess
 	 */
 	private function parseLine(line:String)
 	{
+		if (line.length == 0) return;
+		
+		line = line.toLowerCase();
+		var command:String = line.split(' ')[0];
+		
 		var args:Array<String> = parseArgs(line);
-		
-		//trace(args);
-		//return;
-		
-		var command:String = args.shift().toLowerCase();
+		args.shift();
 		var arguments:Array<String> = args;
+		
+		if (command == 'if')
+		{
+			currentLine++;
+			skipUntil(['endif']);
+			return;
+		}
+		
+		if (command == 'for')
+		{
+			currentLine++;
+			skipUntil(['next']);
+			return;
+		}
 		
 		var cmdFunction:Array<String> -> Void = Reflect.field(this, command);
 		
@@ -84,6 +99,14 @@ class ScriptProcess
 		}
 		
 		cmdFunction(arguments);
+	}
+	
+	private function skipUntil(end:Array<String>)
+	{
+		while (end.indexOf(script[currentLine].split(' ')[0]) == -1)
+		{
+			currentLine++;
+		}
 	}
 	
 	/**
@@ -163,6 +186,20 @@ class ScriptProcess
 		return val;
 	}
 	
+	private function detectType(val:String):String
+	{
+		try
+		{
+			Std.parseInt(val);
+		}
+		catch (e:Dynamic)
+		{
+			return 'string';
+		}
+		
+		return 'int';
+	}
+	
 	/**
 	 * Reads file data.
 	 * 
@@ -171,8 +208,8 @@ class ScriptProcess
 	 */
 	private function get(args:Array<String>)
 	{
-		var name:String = args[0].toLowerCase();
-		var type:String = args[1].toLowerCase();
+		var name:String = args[0];
+		var type:String = args[1];
 		var fileNum:Int = (args.length > 2) ? Std.parseInt(args[2]) : 0;
 		
 		var val:Dynamic = null;
@@ -193,7 +230,7 @@ class ScriptProcess
 				error('No such type: $type');
 		}
 		
-		variables.set(name, val);
+		variables[name] = val;
 	}
 	
 	/**
@@ -203,8 +240,8 @@ class ScriptProcess
 	 */
 	private function set(args:Array<String>)
 	{
-		var name1:String = args[0].toLowerCase();
-		var name2:String = args[1].toLowerCase();
+		var name1:String = args[0];
+		var name2:String = args[1];
 		
 		var type:String = null;
 		var val:Dynamic = null;
@@ -212,7 +249,7 @@ class ScriptProcess
 		if (types.indexOf(name2) != -1)
 		{
 			type = name2;
-			name2 = args[2].toLowerCase();
+			name2 = args[2];
 		}
 		
 		if (type != null && types.indexOf(type) == -1)
@@ -220,16 +257,14 @@ class ScriptProcess
 			error('No such type: $type');
 		}
 		
-		if (variables.exists(name2))
+		val = variables[name2];
+		
+		if (val == null)
 		{
-			val = variables.get(name2);
-		}
-		else
-		{
-			val = parseValue(name2, (type != null) ? type : null);
+			val = name2;
 		}
 		
-		variables.set(name1, val);
+		variables[name1] = val;
 	}
 	
 	/**
@@ -246,11 +281,11 @@ class ScriptProcess
 		while (reg.match(msg))
 		{
 			var posLen = reg.matchedPos();
-			var varName:String = msg.substr(posLen.pos + 1, posLen.len - 2).toLowerCase();
-			msg = reg.replace(msg, '${variables.get(varName)}');
+			var varName:String = msg.substr(posLen.pos + 1, posLen.len - 2);
+			msg = reg.replace(msg, '${variables[varName]}');
 		}
 		
-		Sys.println('--Script message: ');
+		Sys.println('==Script message: ');
 		Sys.println('  $msg');
 	}
 	
@@ -262,12 +297,46 @@ class ScriptProcess
 	 */
 	private function getdstring(args:Array<String>)
 	{
-		var name:String = args[0].toLowerCase();
-		var length:Int = Std.parseInt(args[1].toLowerCase());
+		var name:String = args[0];
+		var length:Int = Std.parseInt(args[1]);
 		var fileNum:Int = (args.length > 2) ? Std.parseInt(args[2]) : 0;
 		
 		var val:String = files[fileNum].readString(length);
-		variables.set(name, val);
+		variables[name] = val;
+	}
+	
+	private function string(args:Array<String>)
+	{
+		var name1:String = args[0];
+		var op:String = args[1];
+		var name2:String = args[2];
+		
+		var val1:String = variables[name1];
+		var val2:String = variables[name2];
+		
+		if (val1 == null) val1 = '';
+		if (val2 == null) val2 = name2;
+		
+		switch(op)
+		{
+			case '=':
+				val1 = val2;
+			case '+', '+=':
+				val1 = '$val1$val2';
+			case '-', '-=':
+				if (detectType(val2) == 'int')
+				{
+					var x:Int = Std.parseInt(val2);
+					
+					val1 = (x < 0) ? val1.substring( -x) : val1.substring(0, val1.length - x);
+				}
+				else
+				{
+					StringTools.replace(val1, val2, '');
+				}
+		}
+		
+		variables[name1] = val1;
 	}
 	
 	/**
@@ -285,7 +354,7 @@ class ScriptProcess
 	 */
 	private function error(msg:String, terminate:Bool = true)
 	{
-		Sys.println('--Error on line $currentLine:');
+		Sys.println('--Error on line ${currentLine + 1}:');
 		Sys.println('  $msg');
 		
 		if (terminate) Sys.exit(10);

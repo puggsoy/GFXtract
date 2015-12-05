@@ -48,9 +48,7 @@ class Main
 	 */
 	private function parseScript(script:FileInput, input:FileInput)
 	{
-		
-		
-		var lines:Array<String> = [while (!script.eof()) script.readLine()];
+		var lines:Array<String> = [while (!script.eof()) StringTools.ltrim(script.readLine())];
 		
 		var sp:ScriptProcess = new ScriptProcess(lines, input);
 		sp.run();
