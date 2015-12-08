@@ -186,18 +186,9 @@ class ScriptProcess
 		return val;
 	}
 	
-	private function detectType(val:String):String
+	private function isInt(val:String):Bool
 	{
-		try
-		{
-			Std.parseInt(val);
-		}
-		catch (e:Dynamic)
-		{
-			return 'string';
-		}
-		
-		return 'int';
+		return ~/^[0-9]+$/.match(val);
 	}
 	
 	/**
@@ -305,6 +296,12 @@ class ScriptProcess
 		variables[name] = val;
 	}
 	
+	/**
+	 * Modifies strings.
+	 * 
+	 * Script format: String VAR OP VAR
+	 * The result is stored in the first VAR
+	 */
 	private function string(args:Array<String>)
 	{
 		var name1:String = args[0];
@@ -324,7 +321,7 @@ class ScriptProcess
 			case '+', '+=':
 				val1 = '$val1$val2';
 			case '-', '-=':
-				if (detectType(val2) == 'int')
+				if (isInt(val2))
 				{
 					var x:Int = Std.parseInt(val2);
 					
@@ -334,6 +331,41 @@ class ScriptProcess
 				{
 					StringTools.replace(val1, val2, '');
 				}
+			default:
+				error('Invalid operator!');
+		}
+		
+		variables[name1] = val1;
+	}
+	
+	private function math(args:Array<String>)
+	{
+		var name1:String = args[0];
+		var op:String = args[1];
+		var name2:String = args[2];
+		
+		var val1:Int = Std.parseInt(variables[name1]);
+		var val2:Int = Std.parseInt(variables[name2]);
+		
+		if (val1 == null) val1 = 0;
+		if (val2 == null) val2 = Std.parseInt(name2);
+		
+		switch(op)
+		{
+			case '=':
+				val1 = val2;
+			case '+', '+=':
+				val1 += val2;
+			case '-', '-=':
+				val1 -= val2;
+			case '*', '*=':
+				val1 *= val2;
+			case '/', '/=':
+				val1 = Std.int(val1 / val2);
+			case '%', '%=':
+				val1 %= val2;
+			default:
+				error('Invalid operator!');
 		}
 		
 		variables[name1] = val1;
