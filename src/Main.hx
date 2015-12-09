@@ -48,10 +48,53 @@ class Main
 	 */
 	private function parseScript(script:FileInput, input:FileInput)
 	{
-		var lines:Array<String> = [while (!script.eof()) StringTools.ltrim(script.readLine())];
+		var lines:Array<String> = new Array<String>();
+		var inComment:Bool = false;
+		
+		while (!script.eof())
+		{
+			var r:Array<Dynamic> = removeComments(script.readLine(), inComment);
+			
+			lines.push(r[0]);
+			inComment = r[1];
+		}
+		
+		var lines:Array<String> = [for(line in lines) StringTools.ltrim(line)];
 		
 		var sp:ScriptProcess = new ScriptProcess(lines, input);
 		sp.run();
+	}
+	
+	private function removeComments(line:String, inComment:Bool):Array<Dynamic>
+	{
+		var startCom:Int = line.indexOf('#');
+		if(startCom != -1) line = line.substring(0, startCom);
+		var startCom:Int = line.indexOf('//');
+		if(startCom != -1) line = line.substring(0, startCom);
+		
+		startCom = 0;
+		var endCom:Int = -2;
+		
+		if (inComment)
+		{
+			endCom = line.indexOf('*/');
+		}
+		
+		while(startCom != -1)
+		{
+			if (endCom == -1)
+			{
+				line = line.substring(0, startCom);
+				return [line, true];
+			}
+			
+			line = line.substring(0, startCom) + line.substring(endCom + 2);
+			
+			startCom = line.indexOf('/*');
+			endCom = line.indexOf('*/', startCom + 2);
+		}
+		
+		return [line, false];
 	}
 	
 	/***************
