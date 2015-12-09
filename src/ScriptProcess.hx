@@ -70,8 +70,7 @@ class ScriptProcess
 	{
 		if (line.length == 0) return;
 		
-		line = line.toLowerCase();
-		var command:String = line.split(' ')[0];
+		var command:String = line.split(' ')[0].toLowerCase();
 		
 		var args:Array<String> = parseArgs(line);
 		args.shift();
@@ -199,8 +198,8 @@ class ScriptProcess
 	 */
 	private function get(args:Array<String>)
 	{
-		var name:String = args[0];
-		var type:String = args[1];
+		var name:String = args[0].toLowerCase();
+		var type:String = args[1].toLowerCase();
 		var fileNum:Int = (args.length > 2) ? Std.parseInt(args[2]) : 0;
 		
 		var val:Dynamic = null;
@@ -231,7 +230,7 @@ class ScriptProcess
 	 */
 	private function set(args:Array<String>)
 	{
-		var name1:String = args[0];
+		var name1:String = args[0].toLowerCase();
 		var name2:String = args[1];
 		
 		var type:String = null;
@@ -239,7 +238,7 @@ class ScriptProcess
 		
 		if (types.indexOf(name2) != -1)
 		{
-			type = name2;
+			type = name2.toLowerCase();
 			name2 = args[2];
 		}
 		
@@ -248,7 +247,7 @@ class ScriptProcess
 			error('No such type: $type');
 		}
 		
-		val = variables[name2];
+		val = variables[name2.toLowerCase()];
 		
 		if (val == null)
 		{
@@ -288,7 +287,7 @@ class ScriptProcess
 	 */
 	private function getdstring(args:Array<String>)
 	{
-		var name:String = args[0];
+		var name:String = args[0].toLowerCase();
 		var length:Int = Std.parseInt(args[1]);
 		var fileNum:Int = (args.length > 2) ? Std.parseInt(args[2]) : 0;
 		
@@ -304,12 +303,12 @@ class ScriptProcess
 	 */
 	private function string(args:Array<String>)
 	{
-		var name1:String = args[0];
+		var name1:String = args[0].toLowerCase();
 		var op:String = args[1];
 		var name2:String = args[2];
 		
 		var val1:String = variables[name1];
-		var val2:String = variables[name2];
+		var val2:String = variables[name2.toLowerCase()];
 		
 		if (val1 == null) val1 = '';
 		if (val2 == null) val2 = name2;
@@ -340,12 +339,12 @@ class ScriptProcess
 	
 	private function math(args:Array<String>)
 	{
-		var name1:String = args[0];
+		var name1:String = args[0].toLowerCase();
 		var op:String = args[1];
 		var name2:String = args[2];
 		
 		var val1:Int = Std.parseInt(variables[name1]);
-		var val2:Int = Std.parseInt(variables[name2]);
+		var val2:Int = Std.parseInt(variables[name2.toLowerCase()]);
 		
 		if (val1 == null) val1 = 0;
 		if (val2 == null) val2 = Std.parseInt(name2);
