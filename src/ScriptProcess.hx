@@ -272,7 +272,7 @@ class ScriptProcess
 		{
 			var posLen = reg.matchedPos();
 			var varName:String = msg.substr(posLen.pos + 1, posLen.len - 2);
-			msg = reg.replace(msg, '${variables[varName]}');
+			msg = reg.replace(msg, '${variables[varName.toLowerCase()]}');
 		}
 		
 		Sys.println('==Script message: ');
@@ -296,7 +296,7 @@ class ScriptProcess
 	}
 	
 	/**
-	 * Modifies strings.
+	 * Math for strings, modifies them.
 	 * 
 	 * Script format: String VAR OP VAR
 	 * The result is stored in the first VAR
@@ -337,6 +337,12 @@ class ScriptProcess
 		variables[name1] = val1;
 	}
 	
+	/**
+	 * Performs mathematical operations on numbers.
+	 * 
+	 * Script format: Math VAR OP VAR
+	 * The result is stored in the first VAR
+	 */
 	private function math(args:Array<String>)
 	{
 		var name1:String = args[0].toLowerCase();
@@ -368,6 +374,28 @@ class ScriptProcess
 		}
 		
 		variables[name1] = val1;
+	}
+	
+	/**
+	 * Checks that the string VAR is at the current point in the archive. Good for checking magic IDs.
+	 * 
+	 * Script format: IDString VAR
+	 */
+	private function idstring(args:Array<String>)
+	{
+		var name1:String = args[0];
+		var fileNum:Int = (args.length > 1) ? Std.parseInt(args[1]) : 0;
+		
+		var val1:String = variables[name1.toLowerCase()];
+		
+		if (val1 == null) val1 = name1;
+		
+		var s:String = files[fileNum].readString(val1.length);
+		
+		if (s != val1)
+		{
+			error('IDString expecting $val1, got $s');
+		}
 	}
 	
 	/**
