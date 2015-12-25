@@ -2,7 +2,9 @@ package;
 
 import haxe.ds.StringMap;
 import haxe.io.BytesInput;
+import openfl.geom.Point;
 import sys.io.FileInput;
+import sys.io.FileSeek;
 
 typedef VarEntry = {
 	var key:String;
@@ -379,23 +381,64 @@ class ScriptProcess
 	/**
 	 * Checks that the string VAR is at the current point in the archive. Good for checking magic IDs.
 	 * 
-	 * Script format: IDString VAR
+	 * Script format: IDString VAR [FILENUM]
 	 */
 	private function idstring(args:Array<String>)
 	{
-		var name1:String = args[0];
+		var name:String = args[0];
 		var fileNum:Int = (args.length > 1) ? Std.parseInt(args[1]) : 0;
 		
-		var val1:String = variables[name1.toLowerCase()];
+		var val:String = variables[name.toLowerCase()];
 		
-		if (val1 == null) val1 = name1;
+		if (val == null) val = name;
 		
-		var s:String = files[fileNum].readString(val1.length);
+		var s:String = files[fileNum].readString(val.length);
 		
-		if (s != val1)
+		if (s != val)
 		{
-			error('IDString expecting $val1, got $s');
+			error('IDString expecting $val, got $s');
 		}
+	}
+	
+	/**
+	 * Checks that the string VAR is at the current point in the archive. Good for checking magic IDs.
+	 * 
+	 * Script format: GoTo OFFSET [TYPE] [FILENUM]
+	 * If OFFSET is 'SOF' or 'EOF' it will go to start or end of file, respectively (overrides TYPE).
+	 */
+	private function goto(args:Array<String>)
+	{
+		var name:String = args[0];
+		var type:String = (args.length > 1) ? args[1] : 'set';
+		var fileNum:Int = (args.length > 2) ? Std.parseInt(args[2]) : 0;
+		
+		var val:Int = Std.parseInt(variables[name]);
+		
+		if (name == 'SOF')
+		{
+			val = 0;
+			type = 'set';
+		}
+		else
+		if (name == 'EOF')
+		{
+			val = 0;
+			type = 'end';
+		}
+		else
+		if (val == null) val = Std.parseInt(name);
+		
+		var seekType:FileSeek = FileSeek.SeekBegin;
+		
+		switch(type)
+		{
+			case 'cur':
+				seekType = FileSeek.SeekCur;
+			case 'end':
+				seekType = FileSeek.SeekEnd;
+		}
+		
+		files[fileNum].seek(val, seekType);
 	}
 	
 	/**
