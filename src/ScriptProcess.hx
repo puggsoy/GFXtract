@@ -32,6 +32,12 @@ class ScriptProcess
 											  'string',
 											  'image'];
 	
+	private var bpp:Int = 32;
+	private var format:String = 'ARGB';
+	private var indexed:Bool = false;
+	private var bpc:Int = -1;
+	private var palLoc:Int = -1;
+	
 	/**
 	 * @param	script The loaded script, as an array of its lines
 	 * @param   file The loaded file
@@ -439,6 +445,63 @@ class ScriptProcess
 		}
 		
 		files[fileNum].seek(val, seekType);
+	}
+	
+	/**
+	 * Reads image data and stores it in an object.
+	 * 
+	 * Script format: Read VAR WIDTH HEIGHT BPP FORMAT [FILENUM]
+	 * The image object is stored in VAR.
+	 */
+	private function read(args:Array<String>)
+	{
+		var name:String = args[0];
+		var widthStr:String = args[1];
+		var heightStr:String = args[2];
+		var fileNum:Int = (args.length > 3) ? Std.parseInt(args[3]) : 0;
+		
+		var width:Int = variables[widthStr];
+		var height:Int = variables[heightStr];
+		
+		if (width == null) width = Std.parseInt(widthStr);
+		if (height == null) height = Std.parseInt(heightStr);
+		
+		var img:Image = new Image();
+		
+		if (indexed) img.readIndexed(width, height, bpp, format, bpc, palLoc, files[fileNum]);
+		else img.read(width, height, bpp, format, files[fileNum]);
+	}
+	
+	private function setformat(args:Array<String>)
+	{
+		var bppStr:String = args[0];
+		var formatStr:String = args[1];
+		
+		bpp = variables[bppStr];
+		format = variables[formatStr];
+		
+		if (bpp == null) bpp = Std.parseInt(bppStr);
+		if (format == null) format = formatStr;
+		
+		if (args.length > 2)
+		{
+			var indexedStr:String = args[2];
+			var parsed:Int = variables[indexedStr];
+			if (parsed == null) parsed = Std.parseInt(indexedStr);
+			indexed = (parsed == 0) ? false : true;
+			
+			if (indexed)
+			{
+				var bpcStr:String = args[3];
+				var palLocStr:String = args[4];
+				
+				bpc = variables[bpcStr];
+				palLoc = variables[palLocStr];
+				
+				if (bpc == null) bpc = Std.parseInt(bpcStr);
+				if (palLoc == null) palLoc = Std.parseInt(palLocStr);
+			}
+		}
 	}
 	
 	/**
