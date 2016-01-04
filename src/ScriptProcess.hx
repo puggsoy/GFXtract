@@ -2,7 +2,9 @@ package;
 
 import haxe.ds.StringMap;
 import haxe.io.BytesInput;
+import haxe.io.Path;
 import openfl.geom.Point;
+import sys.io.File;
 import sys.io.FileInput;
 import sys.io.FileSeek;
 
@@ -15,11 +17,17 @@ class ScriptProcess
 {
 	private var script:Array<String>;
 	private var currentLine:Int;
+	private var basename:String;
 	
 	/**
 	 * Holds all open files. 0 is the file originally specified by the user.
 	 */
 	private var files:Array<FileInput>;
+	
+	/**
+	 * Directory of output files
+	 */
+	private var outDir:String;
 	
 	/**
 	 * Stores all script variables
@@ -42,12 +50,15 @@ class ScriptProcess
 	 * @param	script The loaded script, as an array of its lines
 	 * @param   file The loaded file
 	 */
-	public function new(script:Array<String>, file:FileInput)
+	public function new(script:Array<String>, file:String, out:String)
 	{
 		this.script = script;
 		
 		files = new Array<FileInput>();
-		files.push(file);
+		files.push(File.read(file));
+		
+		basename = Path.withoutExtension(Path.withoutDirectory(file));
+		outDir = out;
 	}
 	
 	/**
@@ -414,7 +425,7 @@ class ScriptProcess
 	 */
 	private function goto(args:Array<String>)
 	{
-		var name:String = args[0];
+		var name:String = args[0].toLowerCase();
 		var type:String = (args.length > 1) ? args[1] : 'set';
 		var fileNum:Int = (args.length > 2) ? Std.parseInt(args[2]) : 0;
 		
@@ -455,9 +466,9 @@ class ScriptProcess
 	 */
 	private function read(args:Array<String>)
 	{
-		var name:String = args[0];
-		var widthStr:String = args[1];
-		var heightStr:String = args[2];
+		var name:String = args[0].toLowerCase();
+		var widthStr:String = args[1].toLowerCase();
+		var heightStr:String = args[2].toLowerCase();
 		var fileNum:Int = (args.length > 3) ? Std.parseInt(args[3]) : 0;
 		
 		var width:Int = variables[widthStr];
@@ -470,6 +481,8 @@ class ScriptProcess
 		
 		if (indexed) img.readIndexed(width, height, bpp, format, bpc, palLoc, files[fileNum]);
 		else img.read(width, height, bpp, format, files[fileNum]);
+		
+		variables[name] = img;
 	}
 	
 	private function setformat(args:Array<String>)
@@ -502,6 +515,27 @@ class ScriptProcess
 				if (palLoc == null) palLoc = Std.parseInt(palLocStr);
 			}
 		}
+	}
+	
+	private function savepos(args:Array<String>)
+	{
+		var name:String = args[0];
+		var fileNum:Int = (args.length > 1) ? Std.parseInt(args[1]) : 0;
+		
+		variables[name] = files[fileNum].tell();
+	}
+	
+	private function savepng(args:Array<String>)
+	{
+		var img:Image = variables[args[0].toLowerCase()];
+		var name:String = args[1];
+		
+		var fName:String = variables[name.toLowerCase()];
+		
+		if (fName == null) fName = name;
+		if (fName == '') fName = basename;
+		
+		img.savePNG(fName, outDir);
 	}
 	
 	/**

@@ -5,9 +5,11 @@ import format.png.Writer;
 import haxe.ds.Vector;
 import haxe.io.Bytes;
 import haxe.io.BytesOutput;
+import haxe.io.Path;
 import openfl.display.BitmapData;
 import openfl.geom.Point;
 import openfl.utils.ByteArray;
+import sys.FileSystem;
 import sys.io.File;
 import sys.io.FileInput;
 import sys.io.FileOutput;
@@ -92,8 +94,6 @@ class Image
 		}
 		
 		bitmap.setPixels(bitmap.rect, ByteArray.fromBytes(pixelOutput.getBytes()));
-		
-		savePNG(bitmap, 'test.png');
 	}
 	
 	public function readIndexed(width:Int, height:Int, bpp:Int, format:String, bpc:Int, palLoc:Int, f:FileInput)
@@ -229,13 +229,17 @@ class Image
 		}
 		
 		bitmap.setPixels(bitmap.rect, ByteArray.fromBytes(pixelOutput.getBytes()));
-		
-		savePNG(bitmap, 'test.png');
 	}
 	
-	private function savePNG(bmp:BitmapData, filePath:String)
+	public function savePNG(fileName:String, outDir:String)
 	{
-		var dat:Data = Tools.build32ARGB(bmp.width, bmp.height, bmp.getPixels(bmp.rect));
+		var filePath:String = outDir + fileName;
+		
+		if (Path.extension(filePath) != 'png') filePath += '.png';
+		
+		FileSystem.createDirectory(Path.directory(filePath));
+		
+		var dat:Data = Tools.build32ARGB(bitmap.width, bitmap.height, bitmap.getPixels(bitmap.rect));
 		var o:FileOutput = File.write(filePath);
 		new Writer(o).write(dat);
 		o.close();

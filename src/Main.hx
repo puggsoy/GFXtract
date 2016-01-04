@@ -2,6 +2,7 @@ package;
 
 import haxe.io.BytesInput;
 import haxe.io.Input;
+import haxe.io.Path;
 import neko.Lib;
 import sys.FileSystem;
 import sys.io.File;
@@ -19,7 +20,7 @@ class Main
 	{
 		args = Sys.args();
 		
-		if (args.length < 2)
+		if (args.length < 3)
 		{
 			Sys.println('Not enough arguments!');
 			Sys.exit(1);
@@ -36,17 +37,37 @@ class Main
 		
 		var scriptPath:String = args[0];
 		var inputPath:String = args[1];
+		var outPath:String = Path.addTrailingSlash(args[2]);
 		
 		var scriptFile:FileInput = File.read(scriptPath);
-		var inputFile:FileInput = File.read(inputPath);
+		var inputFiles:Array<String> = new Array<String>();
 		
-		parseScript(scriptFile, inputFile);
+		if (FileSystem.isDirectory(inputPath))
+		{
+			var fileNames:Array<String> = FileSystem.readDirectory(inputPath);
+			
+			for (fn in fileNames) inputFiles.push(Path.addTrailingSlash(inputPath) + fn);
+		}
+		else inputFiles.push(inputPath);
+		
+		if (FileSystem.exists(outPath) && !FileSystem.isDirectory(outPath))
+		{
+			Sys.println('Output must be a valid directory');
+			Sys.exit(3);
+		}
+		else
+		if (!FileSystem.exists(outPath))
+		{
+			FileSystem.createDirectory(outPath);
+		}
+		
+		parseScript(scriptFile, inputFiles, outPath);
 	}
 	
 	/**
 	 * Loads input file(s) and runs the script on each.
 	 */
-	private function parseScript(script:FileInput, input:FileInput)
+	private function parseScript(script:FileInput, files:Array<String>, outPath:String)
 	{
 		var lines:Array<String> = new Array<String>();
 		var inComment:Bool = false;
@@ -61,8 +82,10 @@ class Main
 		
 		var lines:Array<String> = [for(line in lines) StringTools.ltrim(line)];
 		
-		var sp:ScriptProcess = new ScriptProcess(lines, input);
-		sp.run();
+		for (f in files)
+		{
+			new ScriptProcess(lines, f, outPath).run();
+		}
 	}
 	
 	private function removeComments(line:String, inComment:Bool):Array<Dynamic>
