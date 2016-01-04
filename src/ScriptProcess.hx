@@ -213,7 +213,6 @@ class ScriptProcess
 	 * Reads file data.
 	 * 
 	 * Script format: Get VAR TYPE [FILENUM]
-	 * FILENUM is 0 by default
 	 */
 	private function get(args:Array<String>)
 	{
@@ -302,7 +301,6 @@ class ScriptProcess
 	 * Reads a string of specified length.
 	 * 
 	 * Script format: GetDString VAR LENGTH [FILENUM]
-	 * FILENUM is 0 by default
 	 */
 	private function getdstring(args:Array<String>)
 	{
@@ -459,9 +457,9 @@ class ScriptProcess
 	}
 	
 	/**
-	 * Reads image data and stores it in an object.
+	 * Reads image data and stores it in an object. Should be used after the format has been set using SetFormat.
 	 * 
-	 * Script format: Read VAR WIDTH HEIGHT BPP FORMAT [FILENUM]
+	 * Script format: Read VAR WIDTH HEIGHT [FILENUM]
 	 * The image object is stored in VAR.
 	 */
 	private function read(args:Array<String>)
@@ -485,6 +483,11 @@ class ScriptProcess
 		variables[name] = img;
 	}
 	
+	/**
+	 * Defines the format of images. Should be used before the Read command.
+	 * 
+	 * Script format: SetFormat BPP FORMAT [INDEXED] [BPC] [PALLOC]
+	 */
 	private function setformat(args:Array<String>)
 	{
 		var bppStr:String = args[0];
@@ -517,6 +520,11 @@ class ScriptProcess
 		}
 	}
 	
+	/**
+	 * Stores the current file position in a variable.
+	 * 
+	 * Script format: SavePos VAR [FILENUM]
+	 */
 	private function savepos(args:Array<String>)
 	{
 		var name:String = args[0];
@@ -525,10 +533,15 @@ class ScriptProcess
 		variables[name] = files[fileNum].tell();
 	}
 	
+	/**
+	 * Saves a read image to a PNG.
+	 * 
+	 * Script format: SavePNG VAR [NAME]
+	 */
 	private function savepng(args:Array<String>)
 	{
 		var img:Image = variables[args[0].toLowerCase()];
-		var name:String = args[1];
+		var name:String = (args.length > 1) ? args[1] : '';
 		
 		var fName:String = variables[name.toLowerCase()];
 		
