@@ -534,7 +534,7 @@ class ScriptProcess
 	}
 	
 	/**
-	 * Saves a read image to a PNG.
+	 * Saves an image to a PNG.
 	 * 
 	 * Script format: SavePNG VAR [NAME]
 	 */
@@ -549,6 +549,20 @@ class ScriptProcess
 		if (fName == '') fName = basename;
 		
 		img.savePNG(fName, outDir);
+	}
+	
+	/**
+	 * Flips an image, either horizontally or vertically.
+	 * 
+	 * Script format: Flip VAR [VERT]
+	 * VERT is false by default.
+	 */
+	private function flip(args:Array<String>)
+	{
+		var img:Image = variables[args[0].toLowerCase()];
+		var vert:Bool = (args.length > 1 && Std.parseInt(args[1]) == 1);
+		
+		img.flip(vert);
 	}
 	
 	/**

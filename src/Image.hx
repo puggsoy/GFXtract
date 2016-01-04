@@ -245,6 +245,35 @@ class Image
 		o.close();
 	}
 	
+	public function flip(vert:Bool)
+	{
+		var newBmp:BitmapData = new BitmapData(bitmap.width, bitmap.height, true, 0);
+		
+		if (vert)
+		{
+			for (y in 0...bitmap.height)
+			{
+				for (x in 0...bitmap.width)
+				{
+					newBmp.setPixel32(x, newBmp.height - y - 1, bitmap.getPixel32(x, y));
+				}
+			}
+		}
+		else
+		{
+			for (y in 0...bitmap.height)
+			{
+				for (x in 0...bitmap.width)
+				{
+					newBmp.setPixel32(newBmp.width - x - 1, y, bitmap.getPixel32(x, y));
+				}
+			}
+		}
+		
+		bitmap.dispose();
+		bitmap = newBmp;
+	}
+	
 	//===Utility Functions===//
 	private function validFormat(fmt:String):Bool
 	{
