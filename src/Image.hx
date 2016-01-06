@@ -19,6 +19,9 @@ class Image
 {
 	private var bitmap:BitmapData;
 	
+	public var width(get, null):Int;
+	public var height(get, null):Int;
+	
 	public function new(){}
 	
 	public function read(width:Int, height:Int, bpp:Int, format:String, f:FileInput)
@@ -233,11 +236,13 @@ class Image
 	
 	public function savePNG(fileName:String, outDir:String)
 	{
-		var filePath:String = outDir + fileName;
+		var filePath:String = Path.addTrailingSlash(outDir) + fileName;
 		
 		if (Path.extension(filePath) != 'png') filePath += '.png';
 		
 		FileSystem.createDirectory(Path.directory(filePath));
+		
+		Sys.println('Saving image: $width x $height - $filePath');
 		
 		var dat:Data = Tools.build32ARGB(bitmap.width, bitmap.height, bitmap.getPixels(bitmap.rect));
 		var o:FileOutput = File.write(filePath);
@@ -334,5 +339,15 @@ class Image
 		}
 		
 		return num;
+	}
+	
+	function get_width():Int 
+	{
+		return bitmap.width;
+	}
+	
+	function get_height():Int 
+	{
+		return bitmap.height;
 	}
 }
