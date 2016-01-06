@@ -17,12 +17,11 @@ class ScriptProcess
 {
 	private var script:Array<String>;
 	private var currentLine:Int;
-	private var basename:String;
 	
 	/**
 	 * Holds all open files. 0 is the file originally specified by the user.
 	 */
-	private var files:Array<FileInput>;
+	private var files:Array<InputFile>;
 	
 	/**
 	 * Directory of output files
@@ -54,10 +53,9 @@ class ScriptProcess
 	{
 		this.script = script;
 		
-		files = new Array<FileInput>();
-		files.push(File.read(file));
+		files = new Array<InputFile>();
+		files.push(new InputFile(file));
 		
-		basename = Path.withoutExtension(Path.withoutDirectory(file));
 		outDir = out;
 	}
 	
@@ -225,13 +223,13 @@ class ScriptProcess
 		switch(types.indexOf(type))
 		{
 			case 0:
-				val = files[fileNum].readByte();
+				val = files[fileNum].stream.readByte();
 			case 1:
-				val = files[fileNum].readUInt16();
+				val = files[fileNum].stream.readUInt16();
 			case 2:
-				val = files[fileNum].readInt32();
+				val = files[fileNum].stream.readInt32();
 			case 3:
-				val = files[fileNum].readUntil(0);
+				val = files[fileNum].stream.readUntil(0);
 			case 4:
 				error("Can't get an image like this");
 			default:
@@ -308,7 +306,7 @@ class ScriptProcess
 		var length:Int = Std.parseInt(args[1]);
 		var fileNum:Int = (args.length > 2) ? Std.parseInt(args[2]) : 0;
 		
-		var val:String = files[fileNum].readString(length);
+		var val:String = files[fileNum].stream.readString(length);
 		variables[name] = val;
 	}
 	
@@ -407,7 +405,7 @@ class ScriptProcess
 		
 		if (val == null) val = name;
 		
-		var s:String = files[fileNum].readString(val.length);
+		var s:String = files[fileNum].stream.readString(val.length);
 		
 		if (s != val)
 		{
@@ -453,7 +451,7 @@ class ScriptProcess
 				seekType = FileSeek.SeekEnd;
 		}
 		
-		files[fileNum].seek(val, seekType);
+		files[fileNum].stream.seek(val, seekType);
 	}
 	
 	/**
@@ -477,8 +475,8 @@ class ScriptProcess
 		
 		var img:Image = new Image();
 		
-		if (indexed) img.readIndexed(width, height, bpp, format, bpc, palLoc, files[fileNum]);
-		else img.read(width, height, bpp, format, files[fileNum]);
+		if (indexed) img.readIndexed(width, height, bpp, format, bpc, palLoc, files[fileNum].stream);
+		else img.read(width, height, bpp, format, files[fileNum].stream);
 		
 		variables[name] = img;
 	}
@@ -530,7 +528,7 @@ class ScriptProcess
 		var name:String = args[0];
 		var fileNum:Int = (args.length > 1) ? Std.parseInt(args[1]) : 0;
 		
-		variables[name] = files[fileNum].tell();
+		variables[name] = files[fileNum].stream.tell();
 	}
 	
 	/**
@@ -546,7 +544,7 @@ class ScriptProcess
 		var fName:String = variables[name.toLowerCase()];
 		
 		if (fName == null) fName = name;
-		if (fName == '') fName = basename;
+		if (fName == '') fName = files[0].baseName;
 		
 		img.savePNG(fName, outDir);
 	}
