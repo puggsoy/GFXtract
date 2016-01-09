@@ -8,32 +8,61 @@ import sys.FileSystem;
 import sys.io.File;
 import sys.io.FileInput;
 import sys.io.FileSeek;
+import systools.Dialogs;
 
 class Main 
 {
 	private var args:Array<String> = Sys.args();
 	
-	static private inline var USAGE:String = 'Usage: GFXtract script inFile [outDir]\n    script: The .gxs script containing the instructions for converting.\n    inFile: The file to convert. Can also be a directory containing the files to convert.\n    outDir: Optional, the directory to place the converted files in. If omitted, the directory of the input files is used.';
+	static private inline var USAGE:String = 'Usage: GFXtract script inFile [outDir]\n    script - The .gsl script containing the instructions for converting.\n    inFile - The file to convert. Can also be a directory containing the files to convert.\n    outDir - Optional, the directory to place the converted files in. If omitted, the directory of the input files is used.';
 	static private inline var VERSION:String = '0.1';
 	private var DATE:Date = Date.now();
+	private var ALLFILES:FILEFILTERS = { count: 1, descriptions: ['All Files (*.*)'], extensions: ['*.*'] };
+	
+	private var scriptFile:FileInput;
+	private var inputFiles:Array<String>;
+	private var outDir:String;
 	
 	/**
 	 * Takes in arguments and opens script file.
 	 */
 	public function new()
 	{
-		if (args.length < 2)
-		{
-			Sys.println('Not enough arguments!');
-			Sys.exit(1);
-		}
-		
 		Sys.println('GFXtract graphics converter $VERSION\nby puggsoy');
 		Sys.println('Buildtime: ' + DateTools.format(Date.now(), '%d %b %Y - %H:%M:%S\n'));
 		
-		//Loading the script
-		var scriptPath:String = args[0];
+		if (args.length == 0)
+		{
+			Sys.println('Choose script...');
+			var scriptPath:String = Dialogs.openFile('Choose script...', 'Choose script...', ALLFILES)[0];
+			if (scriptPath == null) return;
+			loadScript(scriptPath);
+			
+			Sys.println('Choose file(s)...');
+			inputFiles = Dialogs.openFile('Choose file(s)...', 'Choose file(s)...', ALLFILES);
+			Sys.println('- Loading input files');
+			
+			Sys.println('Choose output folder...');
+			outDir = Dialogs.folder('Choose output folder...', 'Choose output folder...');
+		}
+		else
+		if(args.length == 1)
+		{
+			Sys.print(USAGE);
+			Sys.exit(1);
+		}
+		else
+		{
+			loadScript(args[0]);
+			loadInput(args[1]);
+			setOutput(args[2]);
+		}
 		
+		parseScript(scriptFile, inputFiles, outDir);
+	}
+	
+	private function loadScript(scriptPath:String)
+	{
 		Sys.print('- ');
 		if (!FileSystem.exists(scriptPath))
 		{
@@ -43,11 +72,11 @@ class Main
 		
 		Sys.println('Loading script $scriptPath');
 		
-		var scriptFile:FileInput = File.read(scriptPath);
-		
-		//Loading the input file
-		var inputPath:String = args[1];
-		
+		scriptFile = File.read(scriptPath);
+	}
+	
+	private function loadInput(inputPath:String)
+	{
 		Sys.print('- ');
 		var w:String = (FileSystem.isDirectory(inputPath)) ? 'folder' : 'file';
 		if (!FileSystem.exists(inputPath))
@@ -56,9 +85,9 @@ class Main
 			Sys.exit(2);
 		}
 		
-		Sys.println('Loading input $w $scriptPath');
+		Sys.println('Loading input $w $inputPath');
 		
-		var inputFiles:Array<String> = new Array<String>();
+		inputFiles = new Array<String>();
 		
 		if (FileSystem.isDirectory(inputPath))
 		{
@@ -67,25 +96,26 @@ class Main
 			for (fn in fileNames) inputFiles.push(Path.addTrailingSlash(inputPath) + fn);
 		}
 		else inputFiles.push(inputPath);
+	}
+	
+	private function setOutput(outPath:String)
+	{
+		outDir = outPath;
 		
-		//Setting the output directory
-		var outPath:String = (args.length > 2) ? args[2] : '.';
-		
-		if (FileSystem.exists(outPath) && !FileSystem.isDirectory(outPath))
+		if (FileSystem.exists(outDir) && !FileSystem.isDirectory(outDir))
 		{
 			Sys.println('Output folder must be a valid directory');
 			Sys.exit(3);
 		}
 		else
-		if (!FileSystem.exists(outPath))
+		if (!FileSystem.exists(outDir))
 		{
 			Sys.println('Output folder $outPath doesn\'t exist, do you want to create it? (y/n)');
-			var c:Int = Sys.getChar(true);
-			Sys.println('');
+			var c:String = Sys.stdin().readLine();
 			
-			if (c == 'y'.charCodeAt(0))
+			if (c.charAt(0) == 'y')
 			{
-				FileSystem.createDirectory(outPath);
+				FileSystem.createDirectory(outDir);
 			}
 			else
 			{
@@ -94,8 +124,6 @@ class Main
 		}
 		
 		Sys.println('- Setting output directory $outPath\n');
-		
-		parseScript(scriptFile, inputFiles, outPath);
 	}
 	
 	/**

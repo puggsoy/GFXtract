@@ -236,13 +236,12 @@ class Image
 	
 	public function savePNG(fileName:String, outDir:String)
 	{
+		if (Path.extension(fileName) != 'png') fileName += '.png';
+		
 		var filePath:String = Path.addTrailingSlash(outDir) + fileName;
-		
-		if (Path.extension(filePath) != 'png') filePath += '.png';
-		
 		FileSystem.createDirectory(Path.directory(filePath));
 		
-		Sys.println('Saving image: $width x $height - $filePath');
+		Sys.println('Saving image: $width x $height - $fileName');
 		
 		var dat:Data = Tools.build32ARGB(bitmap.width, bitmap.height, bitmap.getPixels(bitmap.rect));
 		var o:FileOutput = File.write(filePath);
