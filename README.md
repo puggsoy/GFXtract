@@ -2,10 +2,10 @@
 A script-driven graphic converter/extractor/dumper.
 
 ## Current Functionality
-Right now it just reads in a file and traces each line. This is just to get something up and basic script loading going.
+Can load and save image files. Can also perform simple manipulation (horizontal and vertical flipping). Various file reading and variable manipulation commands.
 
 ## Things to add next
-* Parsing scripts, identifying commands and parameters
-* Executing simple commands (print, exit)
 * If statements and loops
-* Data types and variable creation
+* File-related datatypes such as filename, size, basename, etc
+* More image manipulation (in particular copying parts of images to stitch them together)
+* Binary in strings ('\x' notation)
