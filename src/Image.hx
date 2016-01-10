@@ -1,13 +1,12 @@
 package;
+
 import format.png.Data;
 import format.png.Tools;
 import format.png.Writer;
-import haxe.ds.Vector;
 import haxe.io.Bytes;
 import haxe.io.BytesOutput;
 import haxe.io.Path;
 import openfl.display.BitmapData;
-import openfl.geom.Point;
 import openfl.utils.ByteArray;
 import sys.FileSystem;
 import sys.io.File;
@@ -24,7 +23,7 @@ class Image
 	
 	public function new(){}
 	
-	public function read(width:Int, height:Int, bpp:Int, format:String, f:FileInput)
+	public function read(width:Int, height:Int, bpp:Int, format:String, f:FileInput, lengthCheck:Int)
 	{
 		if (!validFormat(format)) throw 'Invalid colour format';
 		if (bpp % 8 != 0) throw 'BPP must be a multiple of 8';
@@ -35,6 +34,8 @@ class Image
 		bitmap = new BitmapData(width, height, true, 0);
 		var pixelNum:Int = width * height;
 		var length:Int = Std.int(pixelNum * (bpp / 8));
+		
+		if (lengthCheck != 0 && length != lengthCheck) throw 'Given length does not match detected length!';
 		
 		var bytes:Bytes = f.read(length);
 		
@@ -99,7 +100,8 @@ class Image
 		bitmap.setPixels(bitmap.rect, ByteArray.fromBytes(pixelOutput.getBytes()));
 	}
 	
-	public function readIndexed(width:Int, height:Int, bpp:Int, format:String, bpc:Int, palLoc:Int, f:FileInput)
+	public function readIndexed(width:Int, height:Int, bpp:Int, format:String, bpc:Int, palOff:Int, f:FileInput, pf:FileInput,
+								lengthCheck:Int, palLengthCheck:Int)
 	{
 		if (!validFormat(format)) throw 'Invalid colour format';
 		if (bpp % 4 != 0) throw 'BPP must be a multiple of 4';
@@ -111,9 +113,11 @@ class Image
 		var bitsPerChannel:Int = Std.int(bpc / format.length);
 		var palLength:Int = Std.int(Math.pow(2, bpp) * (bpc / 8));
 		
+		if (palLengthCheck != 0 && palLength != palLengthCheck) throw 'Given palette length does not match detected length!';
+		
 		var posHolder:Int = f.tell();
-		f.seek(palLoc, FileSeek.SeekBegin);
-		var bytes:Bytes = f.read(palLength);
+		pf.seek(palOff, FileSeek.SeekBegin);
+		var bytes:Bytes = pf.read(palLength);
 		
 		var palette:Array<Int> = new Array<Int>();
 		var bytepc:Int = Std.int(bpc / 8);
@@ -153,7 +157,7 @@ class Image
 						b = chan;
 					default:
 						trace(char);
-						throw 'format should only contain letters [argb]';
+						throw 'Format should only contain letters [argb]';
 				}
 				
 				col &= Std.int(Math.pow(2, ((format.length - 1 - j) * bitsPerChannel)) - 1);
@@ -169,6 +173,8 @@ class Image
 		bitmap = new BitmapData(width, height, true, 0);
 		var pixelNum:Int = width * height;
 		var length:Int = Std.int(pixelNum * (bpp / 8));
+		
+		if (lengthCheck != 0 && length != lengthCheck) throw 'Given length does not match detected length!';
 		
 		f.seek(posHolder, FileSeek.SeekBegin);
 		bytes = f.read(length);

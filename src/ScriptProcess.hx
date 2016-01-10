@@ -1,17 +1,6 @@
 package;
 
-import haxe.ds.StringMap;
-import haxe.io.BytesInput;
-import haxe.io.Path;
-import openfl.geom.Point;
-import sys.io.File;
-import sys.io.FileInput;
 import sys.io.FileSeek;
-
-typedef VarEntry = {
-	var key:String;
-	var value:Dynamic;
-}
 
 class ScriptProcess
 {
@@ -43,7 +32,9 @@ class ScriptProcess
 	private var format:String = 'ARGB';
 	private var indexed:Bool = false;
 	private var bpc:Int = -1;
-	private var palLoc:Int = -1;
+	private var palOff:Int = -1;
+	private var palFile:Int = -1;
+	private var palLength:Int = 0;
 	
 	/**
 	 * @param	script The loaded script, as an array of its lines
@@ -66,7 +57,7 @@ class ScriptProcess
 	{
 		currentLine = 0;
 		
-		while (currentLine != script.length)
+		while (currentLine < script.length)
 		{
 			try
 			{
@@ -169,7 +160,7 @@ class ScriptProcess
 		return outArgs;
 	}
 	
-	private function parseValue(str:String, ?type:String):Dynamic
+	/*private function parseValue(str:String, ?type:String):Dynamic
 	{
 		var val:Dynamic = null;
 		
@@ -200,7 +191,7 @@ class ScriptProcess
 		}
 		
 		return val;
-	}
+	}*/
 	
 	private function isInt(val:String):Bool
 	{
@@ -242,28 +233,14 @@ class ScriptProcess
 	/**
 	 * Sets a variable.
 	 * 
-	 * Script format: Set VAR [TYPE] VAR
+	 * Script format: Set VAR1 VAR2
 	 */
 	private function set(args:Array<String>)
 	{
 		var name1:String = args[0].toLowerCase();
 		var name2:String = args[1];
 		
-		var type:String = null;
-		var val:Dynamic = null;
-		
-		if (types.indexOf(name2) != -1)
-		{
-			type = name2.toLowerCase();
-			name2 = args[2];
-		}
-		
-		if (type != null && types.indexOf(type) == -1)
-		{
-			error('No such type: $type');
-		}
-		
-		val = variables[name2.toLowerCase()];
+		var val:Dynamic = variables[name2.toLowerCase()];
 		
 		if (val == null)
 		{
@@ -276,7 +253,7 @@ class ScriptProcess
 	/**
 	 * Print out a message. Surround variables with percentage signs (%) to print their values.
 	 * 
-	 * Script format: Print MESSAGE
+	 * Script format: Print MSG
 	 */
 	private function print(args:Array<String>)
 	{
@@ -311,10 +288,10 @@ class ScriptProcess
 	}
 	
 	/**
-	 * Math for strings, modifies them.
+	 * Modifies strings, similar to Math but for strings.
 	 * 
-	 * Script format: String VAR OP VAR
-	 * The result is stored in the first VAR
+	 * Script format: String VAR1 OP VAR2
+	 * The result is stored in the VAR1
 	 */
 	private function string(args:Array<String>)
 	{
@@ -355,8 +332,8 @@ class ScriptProcess
 	/**
 	 * Performs mathematical operations on numbers.
 	 * 
-	 * Script format: Math VAR OP VAR
-	 * The result is stored in the first VAR
+	 * Script format: Math VAR1 OP VAR2
+	 * The result is stored in the VAR1
 	 */
 	private function math(args:Array<String>)
 	{
@@ -392,7 +369,7 @@ class ScriptProcess
 	}
 	
 	/**
-	 * Checks that the string VAR is at the current point in the archive. Good for checking magic IDs.
+	 * Checks that the string VAR is at the current position of the file. Good for checking magic IDs.
 	 * 
 	 * Script format: IDString VAR [FILENUM]
 	 */
@@ -414,9 +391,9 @@ class ScriptProcess
 	}
 	
 	/**
-	 * Checks that the string VAR is at the current point in the archive. Good for checking magic IDs.
+	 * Goes to the position VAR in the file.
 	 * 
-	 * Script format: GoTo OFFSET [TYPE] [FILENUM]
+	 * Script format: GoTo VAR [TYPE] [FILENUM]
 	 * If OFFSET is 'SOF' or 'EOF' it will go to start or end of file, respectively (overrides TYPE).
 	 */
 	private function goto(args:Array<String>)
@@ -455,9 +432,9 @@ class ScriptProcess
 	}
 	
 	/**
-	 * Reads image data and stores it in an object. Should be used after the format has been set using SetFormat.
+	 * Reads image data and stores it in a variable. Should be used after SetFormat.
 	 * 
-	 * Script format: Read VAR WIDTH HEIGHT [FILENUM]
+	 * Script format: Read VAR WIDTH HEIGHT [FILENUM] [LENGTH]
 	 * The image object is stored in VAR.
 	 */
 	private function read(args:Array<String>)
@@ -466,29 +443,32 @@ class ScriptProcess
 		var widthStr:String = args[1].toLowerCase();
 		var heightStr:String = args[2].toLowerCase();
 		var fileNum:Int = (args.length > 3) ? Std.parseInt(args[3]) : 0;
+		var lengthStr:String = (args.length > 4) ? args[4].toLowerCase() : '0';
 		
 		var width:Int = variables[widthStr];
 		var height:Int = variables[heightStr];
+		var length:Int = variables[lengthStr];
 		
 		if (width == null) width = Std.parseInt(widthStr);
 		if (height == null) height = Std.parseInt(heightStr);
+		if (length == null) length = Std.parseInt(lengthStr);
 		
 		var img:Image = new Image();
 		
-		if (indexed) img.readIndexed(width, height, bpp, format, bpc, palLoc, files[fileNum].stream);
-		else img.read(width, height, bpp, format, files[fileNum].stream);
+		if (indexed) img.readIndexed(width, height, bpp, format, bpc, palOff, files[fileNum].stream, files[palFile].stream, length, palLength);
+		else img.read(width, height, bpp, format, files[fileNum].stream, length);
 		
 		variables[name] = img;
 	}
 	
 	/**
-	 * Defines the format of images. Should be used before the Read command.
+	 * Defines the format of images and pixels. Should be used before Read.
 	 * 
-	 * Script format: SetFormat BPP FORMAT [INDEXED] [BPC] [PALLOC]
+	 * Script format: SetFormat BPP FORMAT [INDEXED] [BPC] [PALOFF] [FILENUM]
 	 */
 	private function setformat(args:Array<String>)
 	{
-		var bppStr:String = args[0];
+		var bppStr:String = args[0].toLowerCase();
 		var formatStr:String = args[1];
 		
 		bpp = variables[bppStr];
@@ -499,21 +479,25 @@ class ScriptProcess
 		
 		if (args.length > 2)
 		{
-			var indexedStr:String = args[2];
+			var indexedStr:String = args[2].toLowerCase();
 			var parsed:Int = variables[indexedStr];
 			if (parsed == null) parsed = Std.parseInt(indexedStr);
 			indexed = (parsed == 0) ? false : true;
 			
 			if (indexed)
 			{
-				var bpcStr:String = args[3];
-				var palLocStr:String = args[4];
+				var bpcStr:String = args[3].toLowerCase();
+				var palOffStr:String = args[4].toLowerCase();
+				palFile = (args.length > 5) ? Std.parseInt(args[5]) : 0;
+				var palLengthStr:String = (args.length > 6) ? args[6].toLowerCase() : '0';
 				
 				bpc = variables[bpcStr];
-				palLoc = variables[palLocStr];
+				palOff = variables[palOffStr];
+				palLength = variables[palLengthStr];
 				
 				if (bpc == null) bpc = Std.parseInt(bpcStr);
-				if (palLoc == null) palLoc = Std.parseInt(palLocStr);
+				if (palOff == null) palOff = Std.parseInt(palOffStr);
+				if (palLength == null) palLength = Std.parseInt(palLengthStr);
 			}
 		}
 	}
@@ -525,7 +509,7 @@ class ScriptProcess
 	 */
 	private function savepos(args:Array<String>)
 	{
-		var name:String = args[0];
+		var name:String = args[0].toLowerCase();
 		var fileNum:Int = (args.length > 1) ? Std.parseInt(args[1]) : 0;
 		
 		variables[name] = files[fileNum].stream.tell();
@@ -534,7 +518,7 @@ class ScriptProcess
 	/**
 	 * Saves an image to a PNG.
 	 * 
-	 * Script format: SavePNG VAR [NAME]
+	 * Script format: SavePNG IMG [NAME]
 	 */
 	private function savepng(args:Array<String>)
 	{
@@ -550,9 +534,9 @@ class ScriptProcess
 	}
 	
 	/**
-	 * Flips an image, either horizontally or vertically.
+	 * Flips an image either horizontally or vertically.
 	 * 
-	 * Script format: Flip VAR [VERT]
+	 * Script format: Flip IMG [VERT]
 	 * VERT is false by default.
 	 */
 	private function flip(args:Array<String>)
@@ -570,7 +554,7 @@ class ScriptProcess
 	 */
 	private function exit(args:Array<String>)
 	{
-		Sys.exit(0);
+		currentLine = script.length;
 	}
 	
 	/**

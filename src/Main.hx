@@ -1,20 +1,16 @@
 package;
 
-import haxe.io.BytesInput;
-import haxe.io.Input;
 import haxe.io.Path;
-import neko.Lib;
 import sys.FileSystem;
 import sys.io.File;
 import sys.io.FileInput;
-import sys.io.FileSeek;
 import systools.Dialogs;
 
 class Main 
 {
 	private var args:Array<String> = Sys.args();
 	
-	static private inline var USAGE:String = 'Usage: GFXtract script inFile [outDir]\n    script - The .gsl script containing the instructions for converting.\n    inFile - The file to convert. Can also be a directory containing the files to convert.\n    outDir - Optional, the directory to place the converted files in. If omitted, the directory of the input files is used.';
+	static private inline var USAGE:String = 'Usage: GFXtract <script> <inFile> [outDir]\n    script - The .gsl script containing the instructions for converting.\n    inFile - The file to convert. Can also be a directory containing the files to convert.\n    outDir - Optional, the directory to place the converted files in. If omitted, the directory of the input files is used.';
 	static private inline var VERSION:String = '0.1';
 	private var DATE:Date = Date.now();
 	private var ALLFILES:FILEFILTERS = { count: 1, descriptions: ['All Files (*.*)'], extensions: ['*.*'] };
@@ -34,16 +30,19 @@ class Main
 		if (args.length == 0)
 		{
 			Sys.println('Choose script...');
-			var scriptPath:String = Dialogs.openFile('Choose script...', 'Choose script...', ALLFILES)[0];
-			if (scriptPath == null) return;
-			loadScript(scriptPath);
+			var scriptPaths:Array<String> = Dialogs.openFile('Choose script...', 'Choose script...', ALLFILES);
+			if (scriptPaths == null) return;
+			loadScript(scriptPaths[0]);
 			
 			Sys.println('Choose file(s)...');
 			inputFiles = Dialogs.openFile('Choose file(s)...', 'Choose file(s)...', ALLFILES);
+			if (inputFiles == null) return;
 			Sys.println('- Loading input files');
 			
 			Sys.println('Choose output folder...');
 			outDir = Dialogs.folder('Choose output folder...', 'Choose output folder...');
+			if (outDir == null) return;
+			Sys.println('- Setting output directory $outDir\n');
 		}
 		else
 		if(args.length == 1)
@@ -78,12 +77,14 @@ class Main
 	private function loadInput(inputPath:String)
 	{
 		Sys.print('- ');
-		var w:String = (FileSystem.isDirectory(inputPath)) ? 'folder' : 'file';
+		
 		if (!FileSystem.exists(inputPath))
 		{
-			Sys.println('Input $w $inputPath doesn\'t exist!');
+			Sys.println('Input $inputPath doesn\'t exist!');
 			Sys.exit(2);
 		}
+		
+		var w:String = (FileSystem.isDirectory(inputPath)) ? 'folder' : 'file';
 		
 		Sys.println('Loading input $w $inputPath');
 		
@@ -100,7 +101,7 @@ class Main
 	
 	private function setOutput(outPath:String)
 	{
-		outDir = outPath;
+		outDir = (outPath == null) ? '.' : outPath;
 		
 		if (FileSystem.exists(outDir) && !FileSystem.isDirectory(outDir))
 		{
@@ -110,7 +111,7 @@ class Main
 		else
 		if (!FileSystem.exists(outDir))
 		{
-			Sys.println('Output folder $outPath doesn\'t exist, do you want to create it? (y/n)');
+			Sys.println('Output folder $outDir doesn\'t exist, do you want to create it? (y/n)');
 			var c:String = Sys.stdin().readLine();
 			
 			if (c.charAt(0) == 'y')
@@ -123,7 +124,7 @@ class Main
 			}
 		}
 		
-		Sys.println('- Setting output directory $outPath\n');
+		Sys.println('- Setting output directory $outDir\n');
 	}
 	
 	/**
@@ -156,8 +157,15 @@ class Main
 			new ScriptProcess(lines, files[i], outPath).run();
 		}
 		
-		Sys.print('\n-Complete, press any key to close-');
-		Sys.getChar(false);
+		if (args.length == 0)
+		{
+			Sys.print('\n-Complete, press any key to close-');
+			Sys.getChar(false);
+		}
+		if (args.length > 1)
+		{
+			Sys.print('\n-Complete-');
+		}
 	}
 	
 	private function removeComments(line:String, inComment:Bool):Array<Dynamic>
