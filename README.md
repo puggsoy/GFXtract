@@ -9,3 +9,4 @@ Can load and save image files. Can also perform simple manipulation (horizontal 
 * File-related datatypes such as filename, size, basename, etc
 * More image manipulation (in particular copying parts of images to stitch them together)
 * Binary in strings ('\x' notation)
+* Tiled image reading
