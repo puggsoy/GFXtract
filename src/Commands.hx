@@ -321,6 +321,10 @@ class Commands
 				val1 = Std.int(val1 / val2);
 			case '%', '%=':
 				val1 %= val2;
+			case '>>', '>>=':
+				val1 >>= val2;
+			case '<<', '<<=':
+				val1 <<= val2;
 			default:
 				throw 'Invalid operator!';
 		}
