@@ -14,6 +14,9 @@ import sys.io.FileInput;
 import sys.io.FileOutput;
 import sys.io.FileSeek;
 
+/**
+ * Object that holds a read image.
+ */
 class Image
 {
 	private var bitmap:BitmapData;

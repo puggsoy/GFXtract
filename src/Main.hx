@@ -102,6 +102,7 @@ class Main
 	private function setOutput(outPath:String)
 	{
 		outDir = (outPath == null) ? Path.directory(inputFiles[0]) : outPath;
+		if (outDir == '') outDir = '.';
 		
 		if (FileSystem.exists(outDir) && !FileSystem.isDirectory(outDir))
 		{
@@ -154,7 +155,7 @@ class Main
 			
 			Sys.println('----------------------------------------');
 			
-			new ScriptProcess(lines, files[i], outPath).run();
+			new ScriptProcess(lines, files[i], outPath).startScript();
 		}
 		
 		if (args.length == 0)
