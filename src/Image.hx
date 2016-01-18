@@ -349,13 +349,26 @@ class Image
 		return num;
 	}
 	
-	function get_width():Int 
+	public function get_width():Int 
 	{
 		return bitmap.width;
 	}
 	
-	function get_height():Int 
+	public function get_height():Int 
 	{
 		return bitmap.height;
+	}
+	
+	static public function equals(obj1:Dynamic, obj2:Dynamic):Bool
+	{
+		if (Type.getClass(obj1) != Image || Type.getClass(obj1) != Image) throw 'Must compare images!';
+		
+		var img1:Image = obj1;
+		var img2:Image = obj2;
+		
+		if (img1 == img2) return true;
+		if (img1.width != img2.width || img1.height != img2.height) return false;
+		
+		return obj1.bitmap.compare(obj2.bitmap) == 0;
 	}
 }

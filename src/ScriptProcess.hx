@@ -58,7 +58,9 @@ class ScriptProcess
 		var args:Array<String> = splitLine(line);
 		var command:String = args.shift();
 		
-		if (command == 'exit') exit();
+		if (command == 'if') return ifStatement(args);
+		
+		if (command == 'exit') return exit();
 		
 		Commands.call(command, args);
 	}
@@ -106,6 +108,52 @@ class ScriptProcess
 		}
 		
 		return ret;
+	}
+	
+	private function ifStatement(args:Array<String>)
+	{
+		if (Commands.checkCondition(args))
+		{
+			var cmd:String = script[++currentLine].split(' ')[0];
+			
+			while (cmd != 'elif' && cmd != 'else' && cmd != 'endif')
+			{
+				parseLine(script[currentLine]);
+				if (++currentLine >= script.length) return;
+				cmd = splitLine(script[currentLine])[0];
+			}
+			
+			if (cmd == 'elif' || cmd == 'else') skipUntil(['endif']);
+		}
+		else
+		{
+			var cmd:String = skipUntil(['elif', 'else', 'endif']);
+			if (cmd == 'elif')
+			{
+				var a:Array<String> = splitLine(script[currentLine]);
+				a.shift();
+				ifStatement(a);
+			}
+			else
+			if (cmd == 'else')
+			{
+				ifStatement(['1', '==', '1']);
+			}
+		}
+	}
+	
+	private function skipUntil(end:Array<String>):String
+	{
+		var cmd:String = splitLine(script[++currentLine])[0];
+		
+		while (end.indexOf(cmd) == -1)
+		{
+			if (cmd == 'if') skipUntil(['endif']);
+			if (++currentLine >= script.length) return 'end';
+			cmd = splitLine(script[currentLine])[0];
+		}
+		
+		return cmd;
 	}
 	
 	/**

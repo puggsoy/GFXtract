@@ -26,6 +26,34 @@ class Commands
 	static private var palFile:Int = -1;
 	static private var palLength:Int = 0;
 	
+	static public function checkCondition(args:Array<String>):Bool
+	{
+		var var1:Dynamic = checkVariable(args[0]);
+		var comp:String = args[1];
+		var var2:Dynamic = checkVariable(args[2]);
+		
+		var num1:Int = Std.parseInt(var1);
+		var num2:Int = Std.parseInt(var2);
+		
+		switch(comp)
+		{
+			case '==':
+				if (Type.getClass(var1) == Image) return Image.equals(var1, var2);
+				if (num1 != null && num2 != null) return num1 == num2;
+				return var1 == var2;
+			
+			case '<', '>':
+				if (num1 == null || num2 == null) throw 'Can only use $comp to compare integers!';
+				if (comp == '<') return num1 < num2;
+				if (comp == '>') return num1 > num2;
+			
+			default:
+				throw 'Invalid comparison $comp';
+		}
+		
+		return false;
+	}
+	
 	/**
 	 * Call a command.
 	 */
@@ -208,11 +236,11 @@ class Commands
 		switch(type)
 		{
 			case ByteV:
-				val = files[fileNum].stream.readByte();
+				val = Std.string(files[fileNum].stream.readByte());
 			case ShortV:
-				val = files[fileNum].stream.readUInt16();
+				val = Std.string(files[fileNum].stream.readUInt16());
 			case LongV:
-				val = files[fileNum].stream.readInt32();
+				val = Std.string(files[fileNum].stream.readInt32());
 			case StringV:
 				val = files[fileNum].stream.readUntil(0);
 			case ImageV:
