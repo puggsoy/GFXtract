@@ -26,8 +26,13 @@ class Commands
 	static private var palFile:Int = -1;
 	static private var palLength:Int = 0;
 	
+	/**
+	 * Checks a conditional statement made up of two values and a comparator.
+	 */
 	static public function checkCondition(args:Array<String>):Bool
 	{
+		if (args.length < 3) throw 'A condition requires 3 arguments!';
+		
 		var var1:Dynamic = checkVariable(args[0]);
 		var comp:String = args[1];
 		var var2:Dynamic = checkVariable(args[2]);
@@ -222,6 +227,9 @@ class Commands
 		return ret;
 	}
 	
+	/**
+	 * Replaces "\x" notation bytes with their string characters.
+	 */
 	static private function filterBinary(str:String):String
 	{
 		var reg:EReg = ~/\\x[A-Za-z0-9][A-Za-z0-9]/;

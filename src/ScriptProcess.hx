@@ -59,11 +59,16 @@ class ScriptProcess
 		
 		if (command == 'if') return ifStatement(args);
 		
+		if (command == 'for') return forLoop(args);
+		
 		if (command == 'exit') return exit();
 		
 		Commands.call(command, args);
 	}
 	
+	/**
+	 * Splits a line into a command and arguments.
+	 */
 	private function splitLine(line:String):Array<String>
 	{
 		var ret:Array<String> = new Array();
@@ -109,11 +114,22 @@ class ScriptProcess
 		return ret;
 	}
 	
+	/**
+	 * Handles if statements.
+	 * 
+	 * Script format: If VAR COND VAR
+	 * 				  ...
+	 * 				  [Elif VAR COND VAR]
+	 * 				  ...
+	 * 				  [Else]
+	 * 				  ...
+	 * 				  Endif
+	 */
 	private function ifStatement(args:Array<String>)
 	{
 		if (Commands.checkCondition(args))
 		{
-			var cmd:String = script[++currentLine].split(' ')[0];
+			var cmd:String = splitLine(script[++currentLine])[0];
 			
 			while (cmd != 'elif' && cmd != 'else' && cmd != 'endif')
 			{
@@ -141,6 +157,61 @@ class ScriptProcess
 		}
 	}
 	
+	/**
+	 * Handles for loops
+	 * 
+	 * Script format: For [VAR] [OP] [VAR] [COND] [VAR]
+	 * 				  ...
+	 * 				  Next [VAR] [OP] [VAR]
+	 */
+	private function forLoop(args:Array<String>)
+	{
+		var condResult:Bool = true;
+		var startLine:Int = currentLine;
+		
+		if (args.length >= 3)
+		{
+			Commands.call('math', args);
+			
+			if (args.length >= 5)
+			{
+				condResult = Commands.checkCondition([args[0], args[3], args[4]]);
+			}
+		}
+		
+		if(!condResult)
+		{
+			skipUntil(['next']);
+			return;
+		}
+		
+		while (condResult)
+		{
+			currentLine = startLine;
+			
+			var cmd:String = splitLine(script[++currentLine])[0];
+			
+			while (cmd != 'next')
+			{
+				parseLine(script[currentLine]);
+				if (++currentLine >= script.length) return;
+				cmd = splitLine(script[currentLine])[0];
+			}
+			
+			var nArgs:Array<String> = splitLine(script[currentLine]);
+			nArgs.shift();
+			
+			if (nArgs.length >= 3) Commands.call('math', [nArgs[0], nArgs[1], nArgs[2]]);
+			else
+			if (nArgs.length >= 1) Commands.call('math', [nArgs[0], '+=', '1']);
+			
+			condResult = Commands.checkCondition([args[0], args[3], args[4]]);
+		}
+	}
+	
+	/**
+	 * Skips lines until it finds one of the specified commands. Returns the found command.
+	 */
 	private function skipUntil(end:Array<String>):String
 	{
 		var cmd:String = splitLine(script[++currentLine])[0];
@@ -148,6 +219,7 @@ class ScriptProcess
 		while (end.indexOf(cmd) == -1)
 		{
 			if (cmd == 'if') skipUntil(['endif']);
+			if (cmd == 'for') skipUntil(['next']);
 			if (++currentLine >= script.length) return 'end';
 			cmd = splitLine(script[currentLine])[0];
 		}
