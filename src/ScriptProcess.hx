@@ -15,7 +15,6 @@ class ScriptProcess
 	 */
 	private var currentLine:Int = 0;
 	
-	
 	/**
 	 * Constructor.
 	 */

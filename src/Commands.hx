@@ -222,6 +222,22 @@ class Commands
 		return ret;
 	}
 	
+	static private function filterBinary(str:String):String
+	{
+		var reg:EReg = ~/\\x[A-Za-z0-9][A-Za-z0-9]/;
+		
+		while (reg.match(str))
+		{
+			var pos:Int = reg.matchedPos().pos;
+			var num:Int = Std.parseInt('0x${str.substr(pos + 2, 2)}');
+			if (num == null) throw '\\x${str.substr(pos + 2, 2)} is an invalid binary number!';
+			
+			str = reg.replace(str, String.fromCharCode(num));
+		}
+		
+		return str;
+	}
+	
 	//#############Script functions#############
 	
 	/**
@@ -274,6 +290,11 @@ class Commands
 	 */
 	static private function set(var1Name:String, var2Name:String)
 	{
+		if (variables.exists(var2Name.toLowerCase()))
+		{
+			filterBinary(var2Name);
+		}
+		
 		variables[var1Name] = checkVariable(var2Name);
 	}
 	
@@ -293,6 +314,8 @@ class Commands
 			if (!variables.exists(varName) || !isValidVarName(varName)) throw '$varName is not a valid variable!';
 			msg = reg.replace(msg, '${variables[varName]}');
 		}
+		
+		msg = filterBinary(msg);
 		
 		Sys.println('==Script message: ');
 		Sys.println('  $msg');
@@ -317,9 +340,9 @@ class Commands
 	 */
 	static private function string(var1Name:String, op:String, val2:String)
 	{
-		var val1:String = variables[var1Name];
+		var val1:String = '';
 		
-		if (val1 == null) val1 = '';
+		if (variables.exists(var1Name)) val1 = checkType(variables[var1Name], StringA, 1);
 		
 		switch(op)
 		{
@@ -336,6 +359,8 @@ class Commands
 				throw 'Invalid operator!';
 		}
 		
+		val1 = filterBinary(val1);
+		
 		variables[var1Name] = val1;
 	}
 	
@@ -347,10 +372,9 @@ class Commands
 	 */
 	static private function math(var1Name:String, op:String, val2:Int)
 	{
-		var val1Str:String = variables[var1Name];
 		var val1:Int = 0;
 		
-		if (val1Str != null) val1 = checkType(val1Str, IntA, 1);
+		if (variables.exists(var1Name)) val1 = checkType(variables[var1Name], IntA, 1);
 		
 		switch(op)
 		{
@@ -383,6 +407,8 @@ class Commands
 	 */
 	static private function idstring(val:String, fileNum:Int)
 	{
+		val = filterBinary(val);
+		
 		var s:String = files[fileNum].stream.readString(val.length);
 		
 		if (s != val)
