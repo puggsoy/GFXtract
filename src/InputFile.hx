@@ -15,6 +15,7 @@ class InputFile
 	public var fullName:String;
 	public var fullBaseName:String;
 	public var filePath:String;
+	public var extension:String;
 	
 	public function new(fn:String)
 	{
@@ -29,5 +30,6 @@ class InputFile
 		fullName = FileSystem.fullPath(fn);
 		fullBaseName = Path.withoutExtension(fullName);
 		filePath = Path.directory(fullName);
+		extension = Path.extension(fn);
 	}
 }

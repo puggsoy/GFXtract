@@ -232,19 +232,36 @@ class Commands
 	static private function get(varName:String, type:VarType, fileNum:Int)
 	{
 		var val:Dynamic = null;
+		var f:InputFile = files[fileNum];
 		
 		switch(type)
 		{
 			case ByteV:
-				val = Std.string(files[fileNum].stream.readByte());
+				val = Std.string(f.stream.readByte());
 			case ShortV:
-				val = Std.string(files[fileNum].stream.readUInt16());
+				val = Std.string(f.stream.readUInt16());
 			case LongV:
-				val = Std.string(files[fileNum].stream.readInt32());
+				val = Std.string(f.stream.readInt32());
 			case StringV:
-				val = files[fileNum].stream.readUntil(0);
+				val = f.stream.readUntil(0);
 			case ImageV:
 				throw 'Can\'t get an image like this';
+			case ASizeV:
+				val = f.size;
+			case FileNameV:
+				val = f.fileName;
+			case BaseNameV:
+				val = f.baseName;
+			case FullNameV:
+				val = f.fullName;
+			case FullBaseNameV:
+				val = f.fullBaseName;
+			case FilePathV:
+				val = f.filePath;
+			case ExtensionV:
+				val = f.extension;
+			case LineV:
+				val = f.stream.readLine();
 		}
 		
 		variables[varName] = val;
@@ -486,6 +503,14 @@ private enum VarType
 	LongV;
 	StringV;
 	ImageV;
+	ASizeV;
+	FileNameV;
+	BaseNameV;
+	FullNameV;
+	FullBaseNameV;
+	FilePathV;
+	ExtensionV;
+	LineV;
 }
 
 /**
