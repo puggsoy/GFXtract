@@ -117,7 +117,7 @@ class ScriptProcess
 	/**
 	 * Handles if statements.
 	 * 
-	 * Script format: If VAR COND VAR
+	 * Script format: If VAR1 COND VAR2 [...]
 	 * 				  ...
 	 * 				  [Elif VAR COND VAR]
 	 * 				  ...
@@ -127,15 +127,15 @@ class ScriptProcess
 	 */
 	private function ifStatement(args:Array<String>)
 	{
-		if (Commands.checkCondition(args))
+		if (Commands.checkIf(args))
 		{
-			var cmd:String = splitLine(script[++currentLine])[0];
+			var cmd:String = splitLine(script[++currentLine])[0].toLowerCase();
 			
 			while (cmd != 'elif' && cmd != 'else' && cmd != 'endif')
 			{
 				parseLine(script[currentLine]);
 				if (++currentLine >= script.length) return;
-				cmd = splitLine(script[currentLine])[0];
+				cmd = splitLine(script[currentLine])[0].toLowerCase();
 			}
 			
 			if (cmd == 'elif' || cmd == 'else') skipUntil(['endif']);
@@ -189,13 +189,19 @@ class ScriptProcess
 		{
 			currentLine = startLine;
 			
-			var cmd:String = splitLine(script[++currentLine])[0];
+			var cmd:String = splitLine(script[++currentLine])[0].toLowerCase();
 			
-			while (cmd != 'next')
+			while (cmd != 'next' || cmd != 'break')
 			{
 				parseLine(script[currentLine]);
 				if (++currentLine >= script.length) return;
-				cmd = splitLine(script[currentLine])[0];
+				cmd = splitLine(script[currentLine])[0].toLowerCase();
+			}
+			
+			if (cmd == 'break')
+			{
+				skipUntil(['next']);
+				return;
 			}
 			
 			var nArgs:Array<String> = splitLine(script[currentLine]);
@@ -214,14 +220,14 @@ class ScriptProcess
 	 */
 	private function skipUntil(end:Array<String>):String
 	{
-		var cmd:String = splitLine(script[++currentLine])[0];
+		var cmd:String = splitLine(script[++currentLine])[0].toLowerCase();
 		
 		while (end.indexOf(cmd) == -1)
 		{
 			if (cmd == 'if') skipUntil(['endif']);
 			if (cmd == 'for') skipUntil(['next']);
-			if (++currentLine >= script.length) return 'end';
-			cmd = splitLine(script[currentLine])[0];
+			if (++currentLine >= script.length) return 'end of script';
+			cmd = splitLine(script[currentLine])[0].toLowerCase();
 		}
 		
 		return cmd;

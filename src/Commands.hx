@@ -27,12 +27,45 @@ class Commands
 	static private var palLength:Int = 0;
 	
 	/**
+	 * Checks an if statement's arguments, including AND (&&) and OR (||) connectors.
+	 */
+	static public function checkIf(args:Array<String>):Bool
+	{
+		if (args.length < 3) throw 'A condition requires 3 arguments!';
+		
+		var ret:Bool = false;
+		
+		while (args.length >= 3)
+		{
+			ret = checkCondition(args.splice(0, 3));
+			
+			if (args.length > 0)
+			{
+				var op:String = args.shift();
+				
+				if (op == '&&')
+				{
+					if (!ret) break;
+					else continue;
+				}
+				else
+				if (op == '||')
+				{
+					if (!ret) continue;
+					else break;
+				}
+				else break;
+			}
+		}
+		
+		return ret;
+	}
+	
+	/**
 	 * Checks a conditional statement made up of two values and a comparator.
 	 */
 	static public function checkCondition(args:Array<String>):Bool
 	{
-		if (args.length < 3) throw 'A condition requires 3 arguments!';
-		
 		var var1:Dynamic = checkVariable(args[0]);
 		var comp:String = args[1];
 		var var2:Dynamic = checkVariable(args[2]);
@@ -47,10 +80,17 @@ class Commands
 				if (num1 != null && num2 != null) return num1 == num2;
 				return var1 == var2;
 			
-			case '<', '>':
+			case '!=':
+				if (Type.getClass(var1) == Image) return !Image.equals(var1, var2);
+				if (num1 != null && num2 != null) return num1 != num2;
+				return var1 != var2;
+			
+			case '<', '>', '<=', '>=':
 				if (num1 == null || num2 == null) throw 'Can only use $comp to compare integers!';
 				if (comp == '<') return num1 < num2;
 				if (comp == '>') return num1 > num2;
+				if (comp == '<=') return num1 <= num2;
+				if (comp == '>=') return num1 >= num2;
 			
 			default:
 				throw 'Invalid comparison $comp';
