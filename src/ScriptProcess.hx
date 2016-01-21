@@ -191,7 +191,7 @@ class ScriptProcess
 			
 			var cmd:String = splitLine(script[++currentLine])[0].toLowerCase();
 			
-			while (cmd != 'next' || cmd != 'break')
+			while (cmd != 'next' && cmd != 'break')
 			{
 				parseLine(script[currentLine]);
 				if (++currentLine >= script.length) return;
