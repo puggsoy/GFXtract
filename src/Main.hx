@@ -11,7 +11,7 @@ class Main
 	private var args:Array<String> = Sys.args();
 	
 	static private inline var USAGE:String = 'Usage: GFXtract <script> <inFile> [outDir]\n    script - The .gsl script containing the instructions for converting.\n    inFile - The file to convert. Can also be a directory containing the files to convert.\n    outDir - Optional, the directory to place the converted files in. If omitted, the directory of the input files is used.';
-	static private inline var VERSION:String = '0.2.0';
+	static private inline var VERSION:String = '0.2.1';
 	private var DATE:Date = Date.now();
 	private var ALLFILES:FILEFILTERS = { count: 1, descriptions: ['All Files (*.*)'], extensions: ['*.*'] };
 	

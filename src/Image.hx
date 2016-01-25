@@ -223,7 +223,7 @@ class Image
 				else
 				{
 					pix <<= 8;
-					pix += bytes.get(i);
+					pix += b;
 					i++;
 				}
 				

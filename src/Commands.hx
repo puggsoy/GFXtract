@@ -147,6 +147,9 @@ class Commands
 			case 'flip':
 				args = parseArgs(stringArgs, [ImageA, IntA], [null, 0]);
 				flip(args[0], args[1]);
+			case 'endian':
+				args = parseArgs(stringArgs, [StringA, VarNameA], [null, '']);
+				endian(args[0], args[1]);
 			default:
 				throw 'No such command: $command';
 		}
@@ -564,6 +567,37 @@ class Commands
 	static private function flip(img:Image, vert:Int)
 	{
 		img.flip(vert == 1);
+	}
+	
+	/**
+	 * Changes the endianess of commands that read from files.
+	 * 
+	 * Script format: Endian TYPE [VAR]
+	 * Little endian by default.
+	 */
+	static private function endian(type:String, varName:String)
+	{
+		var big:Bool = files[0].stream.bigEndian;
+		
+		switch(type)
+		{
+			case 'little', 'intel':
+				big = false;
+			case 'big', 'network':
+				big = true;
+			case 'swap', 'change', 'invert':
+				big = !big;
+			case 'save', 'store':
+				variables[varName] = big ? 1 : 0;
+				return;
+			default:
+				throw 'Invalid endian argument: $type';
+		}
+		
+		for (f in files)
+		{
+			f.stream.bigEndian = big;
+		}
 	}
 }
 
