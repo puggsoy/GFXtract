@@ -1,4 +1,5 @@
 package;
+import haxe.io.Path;
 import sys.io.FileSeek;
 
 /**
@@ -150,6 +151,9 @@ class Commands
 			case 'endian':
 				args = parseArgs(stringArgs, [StringA, VarNameA], [null, '']);
 				endian(args[0], args[1]);
+			case 'open':
+				args = parseArgs(stringArgs, [StringA, StringA, IntA, VarNameA], [null, null, 0, '']);
+				open(args[0], args[1], args[2], args[3]);
 			default:
 				throw 'No such command: $command';
 		}
@@ -158,7 +162,7 @@ class Commands
 	/**
 	 * Parses in string arguments into the types given.
 	 */
-	static private function parseArgs(args:Array<String>, types:Array<ArgType>, ?defaults:Array<Dynamic>):Array<Dynamic>
+	static private function parseArgs(args:Array<String>, types:Array<ArgType>, ?defaults:Array<Dynamic>, ?rest:Bool = false):Array<Dynamic>
 	{
 		var ret:Array<Dynamic> = new Array<Dynamic>();
 		
@@ -173,21 +177,19 @@ class Commands
 				continue;
 			}
 			
-			var dynArg:Dynamic = (types[i] == OccupiedVarA || types[i] == VarNameA) ? args[i] : checkVariable(args[i]);
-			
-			if (Type.getClass(dynArg) == Image)
+			if (i == types.length - 1 && rest)
 			{
-				if (types[i] == ImageA)
+				var j:Int = i;
+				while (j < args.length)
 				{
-					ret.push(dynArg);
-					continue;
+					ret.push(checkType(args[j], types[i], j));
+					j++;
 				}
-				else throw 'Argument $argNum should not be an image!';
 			}
-			
-			var arg:String = Std.string(dynArg);
-			
-			ret.push(checkType(arg, types[i], argNum));
+			else
+			{
+				ret.push(checkType(args[i], types[i], i));
+			}
 		}
 		
 		return ret;
@@ -196,41 +198,54 @@ class Commands
 	/**
 	 * Checks an argument's type and returns it in that type.
 	 */
-	static private function checkType(arg:String, type:ArgType, argNum:Int):Dynamic
+	static private function checkType(stringArg:String, type:ArgType, argNum:Int):Dynamic
 	{
-		switch(type)
+		var dynArg:Dynamic = (type == OccupiedVarA || type == VarNameA) ? stringArg : checkVariable(stringArg);
+		
+		if (Type.getClass(dynArg) == Image)
+		{
+			if (type == ImageA)
 			{
-				case StringA:
-					return arg;
-				
-				case IntA:
-					var num:Int = Std.parseInt(arg);
-					if (num == null) throw 'Argument $argNum should be an integer!';
-					return num;
-				
-				case ImageA:
-					throw 'Shouldn\'t be able to get here!!!';
-				
-				case OccupiedVarA:
-					var varName:String = arg.toLowerCase();
-					if (!isValidVarName(varName) || !variables.exists(varName)) throw 'Argument $argNum is not an existing variable!';
-					return varName;
-				
-				case VarNameA:
-					var varName:String = arg.toLowerCase();
-					if (!isValidVarName(varName)) throw 'Argument $argNum is not a valid variable name!';
-					return varName;
-				
-				case TypeA:
-					var vType:VarType = varTypeFromString(arg);
-					if (vType == null) throw 'Argument $argNum is not a valid type!';
-					return vType;
-				
-				case FileNumA:
-					var num:Int = Std.parseInt(arg);
-					if (num == null || num >= files.length) throw 'Argument $argNum should be a valid file number!';
-					return num;
+				return dynArg;
 			}
+			else throw 'Argument $argNum should not be an image!';
+		}
+		
+		var arg:String = Std.string(dynArg);
+		
+		switch(type)
+		{
+			case StringA:
+				return arg;
+			
+			case IntA:
+				var num:Int = Std.parseInt(arg);
+				if (num == null) throw 'Argument $argNum should be an integer!';
+				return num;
+			
+			case ImageA:
+				throw 'Shouldn\'t be able to get here!!!';
+			
+			case OccupiedVarA:
+				var varName:String = arg.toLowerCase();
+				if (!isValidVarName(varName) || !variables.exists(varName)) throw 'Argument $argNum is not an existing variable!';
+				return varName;
+			
+			case VarNameA:
+				var varName:String = arg.toLowerCase();
+				if (!isValidVarName(varName)) throw 'Argument $argNum is not a valid variable name!';
+				return varName;
+			
+			case TypeA:
+				var vType:VarType = varTypeFromString(arg);
+				if (vType == null) throw 'Argument $argNum is not a valid type!';
+				return vType;
+			
+			case FileNumA:
+				var num:Int = Std.parseInt(arg);
+				if (num == null || num >= files.length) throw 'Argument $argNum should be a valid file number!';
+				return num;
+		}
 	}
 	
 	/**
@@ -393,7 +408,7 @@ class Commands
 	{
 		var val1:String = '';
 		
-		if (variables.exists(var1Name)) val1 = checkType(variables[var1Name], StringA, 1);
+		if (variables.exists(var1Name)) val1 = checkType(var1Name, StringA, 1);
 		
 		switch(op)
 		{
@@ -425,7 +440,7 @@ class Commands
 	{
 		var val1:Int = 0;
 		
-		if (variables.exists(var1Name)) val1 = checkType(variables[var1Name], IntA, 1);
+		if (variables.exists(var1Name)) val1 = checkType(var1Name, IntA, 1);
 		
 		switch(op)
 		{
@@ -487,7 +502,7 @@ class Commands
 		{
 			type = 'end';
 		}
-		else offset = checkType(checkVariable(varName), IntA, 1);
+		else offset = checkType(varName, IntA, 1);
 		
 		var seekType:FileSeek = FileSeek.SeekBegin;
 		
@@ -598,6 +613,47 @@ class Commands
 		{
 			f.stream.bigEndian = big;
 		}
+	}
+	
+	/**
+	 * Opens a file
+	 * 
+	 * Script format: Open FOLDER NAME [FILENUM] [EXISTS]
+	 * FILENUM is the file number of the opened file.
+	 * If EXISTS is specified, it will store 1 if the file does exist and 0 if it doesn't. If not specified, will crash if it doesn't exist.
+	 */
+	static private function open(folder:String, name:String, fileNum:Int, exists:String)
+	{
+		var path:String = null;
+		
+		switch(folder)
+		{
+			case 'FDDE':
+				path = files[0].fullBaseName + '.$name';
+			case 'FDSE':
+				path = Path.join([files[0].filePath, name]);
+			default:
+				path = Path.join([folder, name]);
+		}
+		
+		var file:InputFile;
+		
+		try
+		{
+			file = new InputFile(path);
+		}
+		catch (e:Dynamic)
+		{
+			if (exists != '')
+			{
+				variables[exists] = 0;
+				return;
+			}
+			else throw 'Could not open file: $path';
+		}
+		
+		variables[exists] = 1;
+		files[fileNum] = file;
 	}
 }
 

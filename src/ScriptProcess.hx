@@ -251,6 +251,6 @@ class ScriptProcess
 		Sys.println('--Error on line ${currentLine + 1}:');
 		Sys.println('  $msg');
 		
-		if (terminate) Sys.exit(-1);
+		if (terminate) exit();
 	}
 }
