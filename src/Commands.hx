@@ -19,14 +19,6 @@ class Commands
 	
 	static private var variables:Map<String, Dynamic> = new Map<String, Dynamic>();
 	
-	static private var bpp:Int = 32;
-	static private var format:String = 'ARGB';
-	static private var indexed:Bool = false;
-	static private var bpc:Int = -1;
-	static private var palOff:Int = -1;
-	static private var palFile:Int = -1;
-	static private var palLength:Int = 0;
-	
 	/**
 	 * Checks an if statement's arguments, including AND (&&) and OR (||) connectors.
 	 */
@@ -154,6 +146,9 @@ class Commands
 			case 'open':
 				args = parseArgs(stringArgs, [StringA, StringA, IntA, VarNameA], [null, null, 0, '']);
 				open(args[0], args[1], args[2], args[3]);
+			case 'transcol':
+				args = parseArgs(stringArgs, [IntA, IntA], null, true);
+				transcol(args[0], args.slice(1));
 			default:
 				throw 'No such command: $command';
 		}
@@ -531,8 +526,7 @@ class Commands
 	{
 		var img:Image = new Image();
 		
-		if (indexed) img.readIndexed(width, height, bpp, format, bpc, palOff, files[fileNum].stream, files[palFile].stream, length, palLength);
-		else img.read(width, height, bpp, format, files[fileNum].stream, length);
+		img.read(width, height, fileNum, length);
 		
 		variables[varName] = img;
 	}
@@ -544,13 +538,13 @@ class Commands
 	 */
 	static private function setformat(a1:Int, a2:String, a3:Int, a4:Int, a5:Int, a6:Int, a7:Int)
 	{
-		bpp = a1;
-		format = a2;
-		indexed = (a3 != 0);
-		bpc = a4;
-		palOff = a5;
-		palFile = a6;
-		palLength = a7;
+		Image.bpp = a1;
+		Image.format = a2;
+		Image.indexed = (a3 != 0);
+		Image.bpc = a4;
+		Image.palOff = a5;
+		Image.palFile = a6;
+		Image.palLengthCheck = a7;
 	}
 	
 	/**
@@ -654,6 +648,17 @@ class Commands
 		
 		variables[exists] = 1;
 		files[fileNum] = file;
+	}
+	
+	static private function transcol(palNum:Int, cols:Array<Dynamic>)
+	{
+		Image.excludedIndexed = (palNum != 0);
+		Image.excludedCols = new Array<Int>();
+		
+		for (col in cols)
+		{
+			Image.excludedCols.push(col);
+		}
 	}
 }
 

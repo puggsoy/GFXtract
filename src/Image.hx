@@ -19,6 +19,16 @@ import sys.io.FileSeek;
  */
 class Image
 {
+	static public var bpp:Int = 32;
+	static public var format:String = 'ARGB';
+	static public var indexed:Bool = false;
+	static public var bpc:Int = -1;
+	static public var palOff:Int = -1;
+	static public var palFile:Int = -1;
+	static public var palLengthCheck:Int = 0;
+	static public var excludedCols:Array<Int> = new Array<Int>();
+	static public var excludedIndexed:Bool = false;
+	
 	private var bitmap:BitmapData;
 	
 	public var width(get, null):Int;
@@ -26,7 +36,13 @@ class Image
 	
 	public function new(){}
 	
-	public function read(width:Int, height:Int, bpp:Int, format:String, f:FileInput, lengthCheck:Int)
+	public function read(width:Int, height:Int, fileNum:Int, lengthCheck:Int)
+	{
+		if (indexed) readIndexed(width, height, fileNum, lengthCheck);
+		else readNoIndex(width, height, fileNum, lengthCheck);
+	}
+	
+	private function readNoIndex(width:Int, height:Int, fileNum:Int, lengthCheck:Int)
 	{
 		if (!validFormat(format)) throw 'Invalid colour format';
 		if (bpp % 8 != 0) throw 'BPP must be a multiple of 8';
@@ -40,7 +56,11 @@ class Image
 		
 		if (lengthCheck != 0 && length != lengthCheck) throw 'Given length does not match detected length!';
 		
+		var f:FileInput = Commands.files[fileNum].stream;
 		var bytes:Bytes = f.read(length);
+		
+		var ex:Array<Int> = new Array<Int>();
+		if (!excludedIndexed) ex = excludedCols;
 		
 		var pixelOutput:BytesOutput = new BytesOutput();
 		pixelOutput.bigEndian = true;
@@ -90,6 +110,9 @@ class Image
 			if (a == null) a = 0xFF;
 			
 			pix = (a << 24) + (r << 16) + (g << 8) + b;
+			
+			if (ex.indexOf(pix) != -1) pix &= 0xFFFFFF;
+			
 			pixelOutput.writeInt32(pix);
 		}
 		
@@ -103,8 +126,7 @@ class Image
 		bitmap.setPixels(bitmap.rect, ByteArray.fromBytes(pixelOutput.getBytes()));
 	}
 	
-	public function readIndexed(width:Int, height:Int, bpp:Int, format:String, bpc:Int, palOff:Int, f:FileInput, pf:FileInput,
-								lengthCheck:Int, palLengthCheck:Int)
+	private function readIndexed(width:Int, height:Int, fileNum:Int, lengthCheck:Int)
 	{
 		if (!validFormat(format)) throw 'Invalid colour format';
 		if (bpp % 4 != 0) throw 'BPP must be a multiple of 4';
@@ -118,9 +140,14 @@ class Image
 		
 		if (palLengthCheck != 0 && palLength != palLengthCheck) throw 'Given palette length does not match detected length!';
 		
+		var f:FileInput = Commands.files[fileNum].stream;
+		var pf:FileInput = Commands.files[palFile].stream;
+		
 		var posHolder:Int = f.tell();
 		pf.seek(palOff, FileSeek.SeekBegin);
 		var bytes:Bytes = pf.read(palLength);
+		
+		var ex:Array<Int> = excludedCols;
 		
 		var palette:Array<Int> = new Array<Int>();
 		var bytepc:Int = Std.int(bpc / 8);
@@ -169,6 +196,13 @@ class Image
 			if (a == null) a = 0xFF;
 			
 			col = (a << 24) + (r << 16) + (g << 8) + b;
+			
+			if ((excludedIndexed && ex.indexOf(palette.length) != -1) ||
+				(!excludedIndexed && ex.indexOf(col) != -1))
+			{
+				col &= 0xFFFFFF;
+			}
+			
 			palette.push(col);
 		}
 		
@@ -288,7 +322,7 @@ class Image
 	}
 	
 	//===Utility Functions===//
-	private function validFormat(fmt:String):Bool
+	static public function validFormat(fmt:String):Bool
 	{
 		var pattern:EReg = ~/[argb]/;
 		
