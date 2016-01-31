@@ -146,9 +146,9 @@ class Commands
 			case 'open':
 				args = parseArgs(stringArgs, [StringA, StringA, IntA, VarNameA], [null, null, 0, '']);
 				open(args[0], args[1], args[2], args[3]);
-			case 'transcol':
+			/*case 'transcol':
 				args = parseArgs(stringArgs, [IntA, IntA], null, true);
-				transcol(args[0], args.slice(1));
+				transcol(args[0], args.slice(1));*/
 			default:
 				throw 'No such command: $command';
 		}
@@ -620,6 +620,12 @@ class Commands
 	{
 		var path:String = null;
 		
+		if (name == '?')
+		{
+			Sys.println('Please input the filename to open (script line ${ScriptProcess.currentLine}):');
+			name = Sys.stdin().readLine();
+		}
+		
 		switch(folder)
 		{
 			case 'FDDE':
@@ -627,7 +633,7 @@ class Commands
 			case 'FDSE':
 				path = Path.join([files[0].filePath, name]);
 			default:
-				path = Path.join([folder, name]);
+				path = Path.join([outDir, folder, name]);
 		}
 		
 		var file:InputFile;

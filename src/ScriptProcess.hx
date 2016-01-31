@@ -13,7 +13,7 @@ class ScriptProcess
 	/**
 	 * The current line the script reader is on.
 	 */
-	private var currentLine:Int = 0;
+	static public var currentLine:Int = 0;
 	
 	/**
 	 * Constructor.
