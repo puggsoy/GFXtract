@@ -3,6 +3,7 @@ package;
 import format.png.Data;
 import format.png.Tools;
 import format.png.Writer;
+import haxe.ds.Vector;
 import haxe.io.Bytes;
 import haxe.io.BytesOutput;
 import haxe.io.Path;
@@ -26,6 +27,10 @@ class Image
 	static public var palOff:Int = -1;
 	static public var palFile:Int = -1;
 	static public var palLengthCheck:Int = 0;
+	static public var tileW:Int = 1;
+	static public var tileH:Int = 1;
+	static public var palTileW:Int = 1;
+	static public var palTileH:Int = 1;
 	static public var excludedCols:Array<Int> = new Array<Int>();
 	static public var excludedIndexed:Bool = false;
 	
@@ -47,6 +52,8 @@ class Image
 		if (!validFormat(format)) throw 'Invalid colour format';
 		if (bpp % 8 != 0) throw 'BPP must be a multiple of 8';
 		if (bpp > 32) throw 'BPP can\'t be over 32';
+		if (width % tileW != 0) throw 'Width must be a multiple of the tile width!';
+		if (height % tileH != 0) throw 'Height must be a multiple of the tile height!';
 		
 		var bitsPerChannel:Int = Std.int(bpp / format.length);
 		
@@ -62,8 +69,18 @@ class Image
 		var ex:Array<Int> = new Array<Int>();
 		if (!excludedIndexed) ex = excludedCols;
 		
-		var pixelOutput:BytesOutput = new BytesOutput();
-		pixelOutput.bigEndian = true;
+		var ntx:Int = Std.int(width / tileW);
+		var nty:Int = Std.int(height / tileH);
+		var tx:Int = 0, ty:Int = 0;
+		var xintl:Int = -1, yintl:Int = 0;
+		var x:Int = -1, y:Int = 0;
+		
+		var pixelVector:Vector<Vector<Int>> = new Vector<Vector<Int>>(height);
+		for (v in 0...pixelVector.length)
+		{
+			pixelVector[v] = new Vector<Int>(width);
+		}
+		
 		var bytepp:Int = Std.int(bpp / 8);
 		var i:Int = 0;
 		
@@ -113,7 +130,50 @@ class Image
 			
 			if (ex.indexOf(pix) != -1) pix &= 0xFFFFFF;
 			
-			pixelOutput.writeInt32(pix);
+			if (tileH != 1)
+			{
+				if (++xintl == tileW)
+				{
+					xintl = 0;
+					
+					if (++yintl == tileH)
+					{
+						yintl = 0;
+						
+						if (++tx == ntx)
+						{
+							tx = 0;
+							
+							if (++ty == nty) break;
+						}
+					}
+				}
+				
+				x = tx * tileW + xintl;
+				y = ty * tileH + yintl;
+			}
+			else
+			{
+				if (++x == width)
+				{
+					x = 0;
+					
+					if (++y == height) break;
+				}
+			}
+			
+			pixelVector[y][x] = pix;
+		}
+		
+		var pixelOutput:BytesOutput = new BytesOutput();
+		pixelOutput.bigEndian = true;
+		
+		for (y in 0...height)
+		{
+			for (x in 0...width)
+			{
+				pixelOutput.writeInt32(pixelVector[y][x]);
+			}
 		}
 		
 		if (pixelOutput.length / 4 != pixelNum)
@@ -133,6 +193,10 @@ class Image
 		if (bpp > 32) throw 'BPP can\'t be over 32';
 		if (bpc % 8 != 0) throw 'BPC must be a multiple of 8';
 		if (bpc > 32) throw 'BPC can\'t be over 32';
+		if (width % tileW != 0) throw 'Width must be a multiple of the tile width!';
+		if (height % tileH != 0) throw 'Height must be a multiple of the tile height!';
+		if (16 % palTileW != 0) throw '16 must be divisible by the palette tile width!';
+		if (16 % palTileH != 0) throw '16 must be divisible by the palette tile height!';
 		
 		//Read the palette first
 		var bitsPerChannel:Int = Std.int(bpc / format.length);
@@ -206,6 +270,32 @@ class Image
 			palette.push(col);
 		}
 		
+		//If the palette is tiled, tile it!
+		if (palTileH != 1)
+		{
+			var tiledPal:Vector<Int> = new Vector<Int>(palette.length);
+			
+			var ntx:Int = Std.int(16 / palTileW);
+			var nty:Int = Std.int(16 / palTileH);
+			var i:Int = 0;
+			
+			for (ty in 0...nty)
+			{
+				for (tx in 0...ntx)
+				{
+					for (y in 0...palTileH)
+					{
+						for (x in 0...palTileW)
+						{
+							tiledPal[(ty * palTileH + y) * 16 + (tx * palTileW + x)] = palette[i++];
+						}
+					}
+				}
+			}
+			
+			palette = tiledPal.toArray();
+		}
+		
 		//Now for the pixels
 		bitmap = new BitmapData(width, height, true, 0);
 		var pixelNum:Int = width * height;
@@ -216,8 +306,18 @@ class Image
 		f.seek(posHolder, FileSeek.SeekBegin);
 		bytes = f.read(length);
 		
-		var pixelOutput:BytesOutput = new BytesOutput();
-		pixelOutput.bigEndian = true;
+		var ntx:Int = Std.int(width / tileW);
+		var nty:Int = Std.int(height / tileH);
+		var tx:Int = 0, ty:Int = 0;
+		var xintl:Int = -1, yintl:Int = 0;
+		var x:Int = -1, y:Int = 0;
+		
+		var pixelVector:Vector<Vector<Int>> = new Vector<Vector<Int>>(height);
+		for (v in 0...pixelVector.length)
+		{
+			pixelVector[v] = new Vector<Int>(width);
+		}
+		
 		var bytepp:Float = bpp / 8;
 		i = 0;
 		var middle:Bool = false;
@@ -264,7 +364,50 @@ class Image
 				j--;
 			}
 			
-			pixelOutput.writeInt32(palette[pix]);
+			if (tileH != 1)
+			{
+				if (++xintl == tileW)
+				{
+					xintl = 0;
+					
+					if (++yintl == tileH)
+					{
+						yintl = 0;
+						
+						if (++tx == ntx)
+						{
+							tx = 0;
+							
+							if (++ty == nty) break;
+						}
+					}
+				}
+				
+				x = tx * tileW + xintl;
+				y = ty * tileH + yintl;
+			}
+			else
+			{
+				if (++x == width)
+				{
+					x = 0;
+					
+					if (++y == height) break;
+				}
+			}
+			
+			pixelVector[y][x] = palette[pix];
+		}
+		
+		var pixelOutput:BytesOutput = new BytesOutput();
+		pixelOutput.bigEndian = true;
+		
+		for (y in 0...height)
+		{
+			for (x in 0...width)
+			{
+				pixelOutput.writeInt32(pixelVector[y][x]);
+			}
 		}
 		
 		if (pixelOutput.length / 4 != pixelNum)

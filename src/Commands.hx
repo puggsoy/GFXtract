@@ -146,6 +146,9 @@ class Commands
 			case 'open':
 				args = parseArgs(stringArgs, [StringA, StringA, IntA, VarNameA], [null, null, 0, '']);
 				open(args[0], args[1], args[2], args[3]);
+			case 'tiled':
+				args = args = parseArgs(stringArgs, [IntA, IntA, IntA], [null, null, 0]);
+				tiled(args[0], args[1], args[2]);
 			/*case 'transcol':
 				args = parseArgs(stringArgs, [IntA, IntA], null, true);
 				transcol(args[0], args.slice(1));*/
@@ -656,9 +659,23 @@ class Commands
 		files[fileNum] = file;
 	}
 	
-	static private function transcol(palNum:Int, cols:Array<Dynamic>)
+	static private function tiled(width:Int, height:Int, indexed:Int)
 	{
-		Image.excludedIndexed = (palNum != 0);
+		if (indexed == 0)
+		{
+			Image.tileW = width;
+			Image.tileH = height;
+		}
+		else
+		{
+			Image.palTileW = width;
+			Image.palTileH = height;
+		}
+	}
+	
+	static private function transcol(indexed:Int, cols:Array<Dynamic>)
+	{
+		Image.excludedIndexed = (indexed != 0);
 		Image.excludedCols = new Array<Int>();
 		
 		for (col in cols)
