@@ -12,7 +12,7 @@ class Main
 	
 	static private inline var USAGE:String = 'Usage: GFXtract <script> <inFile> [outDir]\n    script - The .gsl script containing the instructions for converting.\n    inFile - The file to convert. Can also be a directory containing the files to convert.\n    outDir - Optional, the directory to place the converted files in. If omitted, the directory of the input files is used.';
 	static private inline var VERSION:String = '0.2.1';
-	private var DATE:Date = Date.now();
+	private var DATE:Date = CompileTime.buildDate();
 	private var ALLFILES:FILEFILTERS = { count: 1, descriptions: ['All Files (*.*)'], extensions: ['*.*'] };
 	
 	private var scriptFile:FileInput;
@@ -25,7 +25,7 @@ class Main
 	public function new()
 	{
 		Sys.println('GFXtract graphics converter $VERSION\nby puggsoy');
-		Sys.println('Buildtime: ' + DateTools.format(Date.now(), '%d %b %Y - %H:%M:%S\n'));
+		Sys.println('Buildtime: ' + DateTools.format(DATE, '%d %b %Y - %H:%M:%S\n'));
 		
 		if (args.length == 0)
 		{
