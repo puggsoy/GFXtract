@@ -13,3 +13,4 @@ This should be compiled as a Neko or C++ command-line program (i.e. not an OpenF
 * [OpenFL](http://www.openfl.org/) (and Lime)
 * [format](https://github.com/HaxeFoundation/format)
 * [systools](https://github.com/waneck/systools)
+* [compiletime](https://github.com/jasononeil/compiletime)
