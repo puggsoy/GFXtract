@@ -15,8 +15,19 @@ class Main
 	private var DATE:Date = CompileTime.buildDate();
 	private var ALLFILES:FILEFILTERS = { count: 1, descriptions: ['All Files (*.*)'], extensions: ['*.*'] };
 	
+	/**
+	 * The file containing the script.
+	 */
 	private var scriptFile:FileInput;
+	
+	/**
+	 * Array of the input filenames.
+	 */
 	private var inputFiles:Array<String>;
+	
+	/**
+	 * The output directory.
+	 */
 	private var outDir:String;
 	
 	/**
@@ -60,6 +71,10 @@ class Main
 		parseScript(scriptFile, inputFiles, outDir);
 	}
 	
+	/**
+	 * Loads the script file.
+	 * @param	scriptPath Path of the file.
+	 */
 	private function loadScript(scriptPath:String)
 	{
 		Sys.print('- ');
@@ -74,6 +89,10 @@ class Main
 		scriptFile = File.read(scriptPath);
 	}
 	
+	/**
+	 * Loads the input file/folder.
+	 * @param	inputPath Path of the file/folder.
+	 */
 	private function loadInput(inputPath:String)
 	{
 		Sys.print('- ');
@@ -84,9 +103,9 @@ class Main
 			Sys.exit(2);
 		}
 		
-		var w:String = (FileSystem.isDirectory(inputPath)) ? 'folder' : 'file';
+		var type:String = (FileSystem.isDirectory(inputPath)) ? 'folder' : 'file';
 		
-		Sys.println('Loading input $w $inputPath');
+		Sys.println('Loading input $type $inputPath');
 		
 		inputFiles = new Array<String>();
 		
@@ -129,7 +148,10 @@ class Main
 	}
 	
 	/**
-	 * Loads input file(s) and runs the script on each.
+	 * Parses the script and runs it on each file.
+	 * @param	script  The script file.
+	 * @param	files   The array of files.
+	 * @param	outPath The output folder.
 	 */
 	private function parseScript(script:FileInput, files:Array<String>, outPath:String)
 	{
@@ -169,6 +191,12 @@ class Main
 		}
 	}
 	
+	/**
+	 * Removes comments from a line.
+	 * @param	line      The line to remove the comment from.
+	 * @param	inComment Whether this line starts in a multiline comment. .
+	 * @return  An array with two elements: the line without comments, and whether we are in a multiline comment.
+	 */
 	private function removeComments(line:String, inComment:Bool):Array<Dynamic>
 	{
 		var startCom:Int = line.indexOf('#');

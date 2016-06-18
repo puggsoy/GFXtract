@@ -20,6 +20,7 @@ import sys.io.FileSeek;
  */
 class Image
 {
+	//Static variables that dictate how images are read in
 	static public var bpp:Int = 32;
 	static public var format:String = 'ARGB';
 	static public var indexed:Bool = false;
@@ -34,58 +35,90 @@ class Image
 	static public var excludedCols:Array<Int> = new Array<Int>();
 	static public var excludedIndexed:Bool = false;
 	
+	/**
+	 * The BitmapData of this image.
+	 */
 	private var bitmap:BitmapData;
 	
 	public var width(get, null):Int;
 	public var height(get, null):Int;
 	
+	/**
+	 * Constructor.
+	 */
 	public function new(){}
 	
+	/**
+	 * Wrapper function for reading an image.
+	 * @param	width
+	 * @param	height
+	 * @param	fileNum
+	 * @param	lengthCheck
+	 */
 	public function read(width:Int, height:Int, fileNum:Int, lengthCheck:Int)
 	{
 		if (indexed) readIndexed(width, height, fileNum, lengthCheck);
 		else readNoIndex(width, height, fileNum, lengthCheck);
 	}
 	
+	//TODO: I should probably redo these completely, they're a bit ugly
+	/**
+	 * Read in a non-indexed image
+	 * @param	width
+	 * @param	height
+	 * @param	fileNum
+	 * @param	lengthCheck
+	 */
 	private function readNoIndex(width:Int, height:Int, fileNum:Int, lengthCheck:Int)
 	{
+		//Some validity checks
 		if (!validFormat(format)) throw 'Invalid colour format';
 		if (bpp % 8 != 0) throw 'BPP must be a multiple of 8';
 		if (bpp > 32) throw 'BPP can\'t be over 32';
 		if (width % tileW != 0) throw 'Width must be a multiple of the tile width!';
 		if (height % tileH != 0) throw 'Height must be a multiple of the tile height!';
 		
+		//Calculate the bits per channel
 		var bitsPerChannel:Int = Std.int(bpp / format.length);
 		
+		//Initialize the bitmap and basic info
 		bitmap = new BitmapData(width, height, true, 0);
 		var pixelNum:Int = width * height;
 		var length:Int = Std.int(pixelNum * (bpp / 8));
 		
+		//Check that our length check is valid
 		if (lengthCheck != 0 && length != lengthCheck) throw 'Given length does not match detected length!';
 		
+		//Get the file and the bytes we're going to read
 		var f:FileInput = Commands.files[fileNum].stream;
 		var bytes:Bytes = f.read(length);
 		
+		//Excluded colours (currently unused/incomplete)
 		var ex:Array<Int> = new Array<Int>();
 		if (!excludedIndexed) ex = excludedCols;
 		
-		var ntx:Int = Std.int(width / tileW);
-		var nty:Int = Std.int(height / tileH);
-		var tx:Int = 0, ty:Int = 0;
-		var xintl:Int = -1, yintl:Int = 0;
-		var x:Int = -1, y:Int = 0;
+		//Tile-related variables
+		var ntx:Int = Std.int(width / tileW);//Number of tiles horizontally
+		var nty:Int = Std.int(height / tileH);//Number of tiles vertically
+		var tx:Int = 0, ty:Int = 0;//X and Y of a tile
+		var xintl:Int = -1, yintl:Int = 0;//X and Y within a tile
 		
+		var x:Int = -1, y:Int = 0;//Overall X and Y
+		
+		//2D vector that will contain our pixel values
 		var pixelVector:Vector<Vector<Int>> = new Vector<Vector<Int>>(height);
 		for (v in 0...pixelVector.length)
 		{
 			pixelVector[v] = new Vector<Int>(width);
 		}
 		
+		//Bytes per pixel
 		var bytepp:Int = Std.int(bpp / 8);
 		var i:Int = 0;
 		
 		while (i < bytes.length)
 		{
+			//Initialize our pixel value
 			var pix:Int = 0;
 			
 			for (j in 0...bytepp)

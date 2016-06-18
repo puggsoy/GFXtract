@@ -21,6 +21,8 @@ class Commands
 	
 	/**
 	 * Checks an if statement's arguments, including AND (&&) and OR (||) connectors.
+	 * @param	args The if's arguments.
+	 * @return The result of the arguments.
 	 */
 	static public function checkIf(args:Array<String>):Bool
 	{
@@ -28,6 +30,7 @@ class Commands
 		
 		var ret:Bool = false;
 		
+		//A condition needs three arguments (LHS, operator, RHS)
 		while (args.length >= 3)
 		{
 			ret = checkCondition(args.splice(0, 3));
@@ -38,12 +41,14 @@ class Commands
 				
 				if (op == '&&')
 				{
+					//AND breaks  if the first is false
 					if (!ret) break;
 					else continue;
 				}
 				else
 				if (op == '||')
 				{
+					//OR breaks if the first is true
 					if (!ret) continue;
 					else break;
 				}
@@ -56,6 +61,8 @@ class Commands
 	
 	/**
 	 * Checks a conditional statement made up of two values and a comparator.
+	 * @param	args The arguments of the condition.
+	 * @return The result of the condition.
 	 */
 	static public function checkCondition(args:Array<String>):Bool
 	{
@@ -68,6 +75,7 @@ class Commands
 		
 		switch(comp)
 		{
+			//Can compare any type
 			case '==':
 				if (Type.getClass(var1) == Image) return Image.equals(var1, var2);
 				if (num1 != null && num2 != null) return num1 == num2;
@@ -78,6 +86,7 @@ class Commands
 				if (num1 != null && num2 != null) return num1 != num2;
 				return var1 != var2;
 			
+			//Can only compare integers
 			case '<', '>', '<=', '>=':
 				if (num1 == null || num2 == null) throw 'Can only use $comp to compare integers!';
 				if (comp == '<') return num1 < num2;
@@ -94,6 +103,8 @@ class Commands
 	
 	/**
 	 * Call a command.
+	 * @param	command    The command to call.
+	 * @param	stringArgs The command's arguments.
 	 */
 	static public function call(command:String, stringArgs:Array<String>)
 	{
@@ -159,22 +170,32 @@ class Commands
 	
 	/**
 	 * Parses in string arguments into the types given.
+	 * @param	args     The string arguments.
+	 * @param	types    The type each argument should be.
+	 * @param	defaults The default values for each argument.
+	 * @param	rest     Whether or not there can be an indefinite number of the last argument. (currently unused)
+	 * @return An array of the parsed arguments, in their types.
 	 */
 	static private function parseArgs(args:Array<String>, types:Array<ArgType>, ?defaults:Array<Dynamic>, ?rest:Bool = false):Array<Dynamic>
 	{
 		var ret:Array<Dynamic> = new Array<Dynamic>();
 		
+		//Go through all the types
 		for (i in 0...types.length)
 		{
-			var argNum:Int = i + 1;
+			//If there are no arguments at this point
 			if (i >= args.length)
 			{
+				//If the default is null, we need an argument!
 				if (defaults == null || defaults[i] == null) throw 'Not enough arguments!';
+				//Otherwise just give it the default
 				else ret.push(defaults[i]);
-				
+				//Move onto the next one
 				continue;
 			}
 			
+			//If there is an argument
+			//If we're at the last one and rest is true, we can take in all the ones after this point
 			if (i == types.length - 1 && rest)
 			{
 				var j:Int = i;
@@ -184,6 +205,7 @@ class Commands
 					j++;
 				}
 			}
+			//Otherwise just grab it
 			else
 			{
 				ret.push(checkType(args[i], types[i], i));
@@ -195,11 +217,17 @@ class Commands
 	
 	/**
 	 * Checks an argument's type and returns it in that type.
+	 * @param	stringArg The argument as a string.
+	 * @param	type      The type we want it in.
+	 * @param	argNum    The number of this argument (for error messages).
+	 * @return The argument in the requested type.
 	 */
 	static private function checkType(stringArg:String, type:ArgType, argNum:Int):Dynamic
 	{
+		//Get the variable as some unknown type
 		var dynArg:Dynamic = (type == OccupiedVarA || type == VarNameA) ? stringArg : checkVariable(stringArg);
 		
+		//If we got an image, handle that
 		if (Type.getClass(dynArg) == Image)
 		{
 			if (type == ImageA)
@@ -209,6 +237,7 @@ class Commands
 			else throw 'Argument $argNum should not be an image!';
 		}
 		
+		//Otherwise we're gonna handle it as a string
 		var arg:String = Std.string(dynArg);
 		
 		switch(type)
@@ -247,7 +276,9 @@ class Commands
 	}
 	
 	/**
-	 * Checks if a string is a variable's name. If it is it returns the variable's value, otherwise it returns the string.
+	 * Checks if a string is a variable's name.
+	 * @param	name The name of the variable.
+	 * @return The variable's value, if it exists; otherwise it returns the given name.
 	 */
 	static private function checkVariable(name:String):Dynamic
 	{
@@ -256,7 +287,10 @@ class Commands
 	}
 	
 	/**
-	 * Checks that a string is a valid variable name.
+	 * Checks that a string is a valid variable name. This means it can contain a-z, A-Z, 0-9, underscore (_), and starts with
+	 * an alphabetical character.
+	 * @param	name The variable name.
+	 * @return Whether or not it's a valid name.
 	 */
 	static private function isValidVarName(name:String):Bool
 	{
@@ -264,7 +298,9 @@ class Commands
 	}
 	
 	/**
-	 * Gets a VarType constructor from a string (case insensitive).
+	 * Gets a VarType from a string (case insensitive).
+	 * @param	str The string.
+	 * @return The VarType.
 	 */
 	static private function varTypeFromString(str:String):VarType
 	{
@@ -285,8 +321,10 @@ class Commands
 	
 	/**
 	 * Replaces "\x" notation bytes with their string characters.
+	 * @param	str The string containing the bytes
+	 * @return The filtered string.
 	 */
-	static private function filterBinary(str:String):String
+	static private function filterBytes(str:String):String
 	{
 		var reg:EReg = ~/\\x[A-Za-z0-9][A-Za-z0-9]/;
 		
@@ -356,7 +394,7 @@ class Commands
 	{
 		if (variables.exists(var2Name.toLowerCase()))
 		{
-			filterBinary(var2Name);
+			filterBytes(var2Name);
 		}
 		
 		variables[var1Name] = checkVariable(var2Name);
@@ -379,7 +417,7 @@ class Commands
 			msg = reg.replace(msg, '${variables[varName]}');
 		}
 		
-		msg = filterBinary(msg);
+		msg = filterBytes(msg);
 		
 		Sys.println('==Script message: ');
 		Sys.println('  $msg');
@@ -423,7 +461,7 @@ class Commands
 				throw 'Invalid operator!';
 		}
 		
-		val1 = filterBinary(val1);
+		val1 = filterBytes(val1);
 		
 		variables[var1Name] = val1;
 	}
@@ -471,7 +509,7 @@ class Commands
 	 */
 	static private function idstring(val:String, fileNum:Int)
 	{
-		val = filterBinary(val);
+		val = filterBytes(val);
 		
 		var s:String = files[fileNum].stream.readString(val.length);
 		
