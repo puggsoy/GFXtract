@@ -162,15 +162,14 @@ class Main
 		var inComment:Bool = false;
 		
 		while (!script.eof())
-		{
-			var line:String = removeComments(script.readLine(), lines.length + 1);
-			
-			lines.push(line);
-		}
+			lines.push(script.readLine().toLowerCase());
 		
-		var lines:Array<String> = [for(line in lines) StringTools.ltrim(line)];
+		lines = Preprocessor.removeComments(lines);
 		
-		for (i in 0...files.length)
+		var instructions:InstructionSet = new InstructionSet(lines);
+		instructions.print();
+		
+		/*for (i in 0...files.length)
 		{
 			if (files.length > 1)
 			{
@@ -190,50 +189,7 @@ class Main
 		if (args.length > 1)
 		{
 			Sys.print('\n-Complete-');
-		}
-	}
-	
-	/**
-	 * Removes comments from a line
-	 * @param	line      The line to remove the comment from
-	 * @param	inComment Whether this line starts in a multiline comment
-	 * @return  An array with two elements: the line without comments, and whether we are in a multiline comment
-	 */
-	private function removeComments(line:String, lineNum:Int):String
-	{
-		var inQuotes:Bool = false;
-		
-		for (i in 0...line.length)
-		{
-			var c:String = line.charAt(i);
-			
-			if (inQuotes)
-			{
-				if (c == '"') inQuotes = false;
-				
-				continue;
-			}
-			
-			if (c == '"')
-			{
-				inQuotes = true;
-				continue;
-			}
-			
-			if (c == '#' || line.substr(i, 2) == '//')
-			{
-				line = line.substring(0, i);
-				break;
-			}
-		}
-		
-		if (inQuotes)
-		{
-			Sys.println('Unclosed quotes on line $lineNum!');
-			Sys.exit(4);
-		}
-		
-		return line;
+		}*/
 	}
 	
 	/***************
