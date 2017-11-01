@@ -11,8 +11,13 @@ class Command implements Statement
 		this.args = args;
 	}
 	
+	public function execute(store:Store):Void
+	{
+		throw "Must override this!";
+	}
+	
 	public function toString():String
 	{
-		return null;
+		throw "Must override this!";
 	}
 }

@@ -169,7 +169,7 @@ class Main
 		var instructions:InstructionSet = new InstructionSet(lines);
 		instructions.print();
 		
-		/*for (i in 0...files.length)
+		for (i in 0...files.length)
 		{
 			if (files.length > 1)
 			{
@@ -178,6 +178,7 @@ class Main
 			
 			Sys.println('----------------------------------------');
 			
+			instructions.execute(files[i], outPath);
 			new ScriptProcess(lines, files[i], outPath).startScript();
 		}
 		
@@ -189,7 +190,7 @@ class Main
 		if (args.length > 1)
 		{
 			Sys.print('\n-Complete-');
-		}*/
+		}
 	}
 	
 	/***************

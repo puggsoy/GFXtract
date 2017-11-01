@@ -2,7 +2,6 @@ package statements.commands;
 
 import statements.Command;
 import values.*;
-import values.GetTypeVal.GetType;
 import sys.io.FileInput;
 
 class Get extends Command 
@@ -41,11 +40,11 @@ class Get extends Command
 		filenum = (args.length > 2) ? cast(args[2], IntVal) : null;
 	}
 	
-	public function execute(files:Array<FileInput>, store:Store):Void
+	override public function execute(store:Store):Void
 	{
 		if (filenum == null) filenum = new IntVal(store.defaultFile);
 		
-		var f:FileInput = files[filenum.value];
+		var f:FileInput = store.files[filenum.value];
 		var v:Value;
 		
 		switch(type.value)
@@ -62,6 +61,13 @@ class Get extends Command
 			case Long:
 				var i:Int = f.readInt32();
 				v = new IntVal(i);
+			case LongLong:
+				var i:Int = f.readInt32();
+				f.readInt32();
+				v = new IntVal(i);
+			case String:  //This is referencing the enum
+				var s:String = f.readUntil(0);
+				v = new StringVal(s);
 		}
 		
 		store.set(var1, v);
@@ -69,6 +75,6 @@ class Get extends Command
 	
 	override public function toString():String
 	{
-		return 'Get ${var1.name} $type $filenum';
+		return 'Get ${var1.name} ${type.value} $filenum';
 	}
 }

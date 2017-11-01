@@ -2,6 +2,8 @@ package;
 import statements.Command;
 import statements.Statement;
 import statements.commands.Get;
+import sys.io.File;
+import sys.io.FileInput;
 import values.GetTypeVal;
 import values.IntVal;
 import values.StringVal;
@@ -33,6 +35,21 @@ class InstructionSet
 			
 			statements.push(command);
 		}
+	}
+	
+	public function execute(fPath:String, outDir:String):Void
+	{
+		var f:FileInput = File.read(fPath);
+		var store:Store = new Store(f, outDir);
+		
+		Sys.println('before:\n${store.toString()}');
+		
+		for (stmt in statements)
+		{
+			stmt.execute(store);
+		}
+		
+		Sys.println('after:\n${store.toString()}');
 	}
 	
 	public function print():Void

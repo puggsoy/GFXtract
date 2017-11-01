@@ -17,7 +17,7 @@ class Preprocessor
 			if (i != -1)
 				nl = nl.substring(0, i);
 			
-			nl = l.trim();
+			nl = nl.trim();
 			if (nl == '') continue;
 			
 			newLines.push(nl);

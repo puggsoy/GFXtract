@@ -17,9 +17,9 @@ enum GetType
 	Short;
 	ThreeByte;
 	Long;
-	/*LongLong;
-	StringG;
-	ASize;
+	LongLong;
+	String;  //Needs to be named the same way as the script uses it
+	/*ASize;
 	FileName;
 	BaseName;
 	FilePath;
